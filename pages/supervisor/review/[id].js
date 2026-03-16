@@ -1,0 +1,245 @@
+import { useEffect, useState } from 'react';
+import Head from 'next/head';
+import { useRouter } from 'next/router';
+import AppLayout from '../../../components/layout/AppLayout';
+import StatusBadge from '../../../components/ui/StatusBadge';
+import { withAuth } from '../../../lib/useAuth';
+import { ROLES, VISUAL_CHECKLIST_ITEMS, INSPECTION_STATUS } from '../../../lib/constants';
+
+function safeParseJSON(str, fallback = {}) {
+  try { return JSON.parse(str); } catch { return fallback; }
+}
+
+function SupervisorReview() {
+  const router = useRouter();
+  const { id } = router.query;
+  const [inspection, setInspection] = useState(null);
+  const [vehicle, setVehicle] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [agentPhone, setAgentPhone] = useState('');
+  const [agentName, setAgentName] = useState('');
+  const [agentLookingUp, setAgentLookingUp] = useState(false);
+  const [remarks, setRemarks] = useState('');
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (id) fetchData();
+  }, [id]);
+
+  async function fetchData() {
+    setLoading(true);
+    try {
+      const iRes = await fetch(`/api/inspection/get?id=${id}`);
+      const iData = await iRes.json();
+      if (iData.inspection) {
+        setInspection(iData.inspection);
+        const vRes = await fetch(`/api/vehicle/search?vehicle_number=${iData.inspection.vehicle_number}`);
+        const vData = await vRes.json();
+        if (vData.found) setVehicle(vData.vehicle);
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function lookupAgent() {
+    if (!agentPhone || agentPhone.length < 10) return;
+    setAgentLookingUp(true);
+    try {
+      const res = await fetch(`/api/supervisor/agent-lookup?phone=${agentPhone}`);
+      const data = await res.json();
+      if (data.found) setAgentName(data.agent.name || '');
+    } catch (e) {}
+    finally { setAgentLookingUp(false); }
+  }
+
+  async function handleAction(action) {
+    setSubmitting(true);
+    setError('');
+    try {
+      const res = await fetch('/api/supervisor/review', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          inspection_id: id,
+          action,
+          agent_phone: agentPhone,
+          agent_name: agentName,
+          supervisor_remarks: remarks,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed');
+      router.push(`/inspection/${id}?reviewed=1`);
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  const visualData = inspection ? safeParseJSON(inspection.visual_data, {}) : {};
+
+  if (loading) return <AppLayout title="Review"><div className="text-center py-16 text-gray-400">Loading...</div></AppLayout>;
+  if (!inspection) return <AppLayout title="Not Found"><div className="text-center py-16 text-gray-400">Not found</div></AppLayout>;
+
+  return (
+    <>
+      <Head><title>Review {id} - AFTS</title></Head>
+      <AppLayout title="Review Inspection">
+        {/* Header */}
+        <div className="card mb-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-xl font-extrabold text-gray-800">{inspection.vehicle_number}</div>
+              <div className="text-xs text-gray-500 mt-0.5">ID: {inspection.inspection_id}</div>
+            </div>
+            <StatusBadge status={inspection.status} />
+          </div>
+          <div className="mt-2 text-xs text-gray-500 flex flex-wrap gap-3">
+            {inspection.lane_type && <span>🛣️ {inspection.lane_type}</span>}
+            {inspection.test_date && <span>📅 {inspection.test_date}</span>}
+            <span>By: {inspection.inspector_username}</span>
+          </div>
+        </div>
+
+        {/* Vehicle */}
+        {vehicle && (
+          <div className="card mb-4">
+            <h2 className="section-title">🚗 Vehicle</h2>
+            <Row label="Owner" value={vehicle.owner_name} />
+            <Row label="Phone" value={vehicle.owner_phone} />
+            <Row label="Engine No." value={vehicle.engine_number} />
+            <Row label="Chassis No." value={vehicle.chassis_number} />
+            <Row label="Mandal / RTO" value={`${vehicle.mandal_name} / ${vehicle.rto_office}`} />
+          </div>
+        )}
+
+        {/* Documents */}
+        <div className="card mb-4">
+          <h2 className="section-title">📄 Documents</h2>
+          <Row label="Test Type" value={inspection.test_type} />
+          <Row label="AFMS Receipt" value={inspection.afms_free_receipt} />
+          <Row label="RC" value={inspection.rc} />
+          <Row label="PUC / Expiry" value={`${inspection.puc || '-'} / ${inspection.puc_expiry || '-'}`} />
+          <Row label="Insurance / Expiry" value={`${inspection.insurance || '-'} / ${inspection.insurance_expiry || '-'}`} />
+          <Row label="Insurance Co." value={inspection.insurance_company} />
+        </div>
+
+        {/* Visual */}
+        {Object.keys(visualData).length > 0 && (
+          <div className="card mb-4">
+            <h2 className="section-title">🔍 Visual Test</h2>
+            {VISUAL_CHECKLIST_ITEMS.map((item) => {
+              const val = visualData[item.id];
+              if (!val) return null;
+              return (
+                <div key={item.id} className="flex justify-between py-1.5 border-b border-gray-50 last:border-0 text-sm">
+                  <span className="text-gray-600">{item.label}</span>
+                  <span className={`font-semibold ${val === 'Yes' ? 'text-green-600' : 'text-red-500'}`}>{val}</span>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Staff */}
+        <div className="card mb-4">
+          <h2 className="section-title">👨‍💼 Staff & Feedback</h2>
+          <Row label="Inspector" value={inspection.lane_inspector} />
+          <Row label="Incharge" value={inspection.lane_incharge} />
+          <Row label="Remarks" value={inspection.remarks} />
+          <Row label="Feedback" value={inspection.feedback} />
+        </div>
+
+        {/* Supervisor Input */}
+        <div className="card mb-4">
+          <h2 className="section-title">🔐 Supervisor Details</h2>
+
+          <div className="mb-4">
+            <label className="form-label">Agent Phone Number</label>
+            <div className="flex gap-2">
+              <input
+                type="tel"
+                value={agentPhone}
+                onChange={(e) => setAgentPhone(e.target.value)}
+                onBlur={lookupAgent}
+                className="form-input"
+                placeholder="Enter 10-digit phone"
+                maxLength={10}
+              />
+              {agentLookingUp && <div className="py-3 px-3 text-gray-400 text-sm">...</div>}
+            </div>
+          </div>
+
+          <div className="mb-4">
+            <label className="form-label">Agent Name</label>
+            <input
+              type="text"
+              value={agentName}
+              onChange={(e) => setAgentName(e.target.value)}
+              className="form-input"
+              placeholder="Auto-filled or enter name"
+            />
+          </div>
+
+          <div className="mb-4">
+            <label className="form-label">Supervisor Remarks</label>
+            <textarea
+              value={remarks}
+              onChange={(e) => setRemarks(e.target.value)}
+              className="form-input"
+              rows={2}
+              placeholder="Optional remarks..."
+            />
+          </div>
+        </div>
+
+        {error && (
+          <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl px-4 py-3 mb-4">
+            ⚠️ {error}
+          </div>
+        )}
+
+        {/* Action Buttons */}
+        <div className="space-y-3">
+          <button
+            onClick={() => handleAction('approve')}
+            disabled={submitting}
+            className="btn-success"
+          >
+            {submitting ? 'Processing...' : '✅ Approve Inspection'}
+          </button>
+          <button
+            onClick={() => handleAction('reject')}
+            disabled={submitting}
+            className="w-full py-3 rounded-xl border-2 border-red-400 text-red-600 font-semibold text-base active:scale-95 transition-all disabled:opacity-50"
+          >
+            ❌ Reject Inspection
+          </button>
+          <button
+            onClick={() => router.push('/supervisor')}
+            className="btn-secondary"
+          >
+            ← Back to Queue
+          </button>
+        </div>
+      </AppLayout>
+    </>
+  );
+}
+
+function Row({ label, value }) {
+  if (!value) return null;
+  return (
+    <div className="flex justify-between items-center py-2 border-b border-gray-50 last:border-0 gap-3">
+      <span className="text-sm text-gray-600">{label}</span>
+      <span className="text-sm font-semibold text-gray-800 text-right">{value}</span>
+    </div>
+  );
+}
+
+export default withAuth(SupervisorReview, [ROLES.SUPERVISOR, ROLES.ADMIN]);

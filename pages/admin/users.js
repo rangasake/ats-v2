@@ -1,0 +1,142 @@
+import { useEffect, useState } from 'react';
+import Head from 'next/head';
+import AppLayout from '../../components/layout/AppLayout';
+import { withAuth } from '../../lib/useAuth';
+import { ROLES } from '../../lib/constants';
+
+function AdminUsers() {
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [form, setForm] = useState({ username: '', password: '', role: ROLES.INSPECTOR, name: '', active: 'true' });
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+
+  useEffect(() => { fetchUsers(); }, []);
+
+  async function fetchUsers() {
+    setLoading(true);
+    try {
+      const res = await fetch('/api/admin/users');
+      const data = await res.json();
+      setUsers(data.users || []);
+    } catch (e) {}
+    finally { setLoading(false); }
+  }
+
+  async function handleCreate(e) {
+    e.preventDefault();
+    setSaving(true);
+    setError('');
+    setSuccess('');
+    try {
+      const res = await fetch('/api/admin/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      setSuccess('User created successfully');
+      setShowForm(false);
+      setForm({ username: '', password: '', role: ROLES.INSPECTOR, name: '', active: 'true' });
+      fetchUsers();
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function toggleActive(user) {
+    const newActive = user.active === 'true' ? 'false' : 'true';
+    await fetch('/api/admin/users', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: user.username, active: newActive }),
+    });
+    fetchUsers();
+  }
+
+  return (
+    <>
+      <Head><title>User Management - AFTS</title></Head>
+      <AppLayout title="User Management">
+        <div className="flex items-center justify-between mb-4">
+          <p className="text-sm text-gray-500">{users.length}/10 users</p>
+          {users.length < 10 && (
+            <button
+              onClick={() => setShowForm(!showForm)}
+              className="bg-blue-600 text-white px-4 py-2 rounded-xl text-sm font-semibold active:scale-95"
+            >
+              {showForm ? 'Cancel' : '+ Add User'}
+            </button>
+          )}
+        </div>
+
+        {success && (
+          <div className="bg-green-50 border border-green-200 text-green-700 text-sm rounded-xl px-4 py-3 mb-4">✅ {success}</div>
+        )}
+        {error && (
+          <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl px-4 py-3 mb-4">⚠️ {error}</div>
+        )}
+
+        {/* Add User Form */}
+        {showForm && (
+          <div className="card mb-4">
+            <h2 className="section-title">➕ New User</h2>
+            <form onSubmit={handleCreate}>
+              <div className="mb-3">
+                <label className="form-label">Full Name</label>
+                <input type="text" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="form-input" required />
+              </div>
+              <div className="mb-3">
+                <label className="form-label">Username</label>
+                <input type="text" value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} className="form-input" required autoCapitalize="none" />
+              </div>
+              <div className="mb-3">
+                <label className="form-label">Password</label>
+                <input type="text" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} className="form-input" required />
+              </div>
+              <div className="mb-4">
+                <label className="form-label">Role</label>
+                <select value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })} className="form-input">
+                  {Object.values(ROLES).map((r) => <option key={r} value={r}>{r}</option>)}
+                </select>
+              </div>
+              <button type="submit" disabled={saving} className="btn-primary">
+                {saving ? 'Creating...' : 'Create User'}
+              </button>
+            </form>
+          </div>
+        )}
+
+        {/* User List */}
+        {loading ? (
+          <div className="text-center py-8 text-gray-400">Loading...</div>
+        ) : (
+          <div className="space-y-3">
+            {users.map((u) => (
+              <div key={u.username} className="card flex items-center justify-between gap-3">
+                <div>
+                  <div className="font-bold text-gray-800">{u.name || u.username}</div>
+                  <div className="text-xs text-gray-500">@{u.username} · {u.role}</div>
+                </div>
+                <button
+                  onClick={() => toggleActive(u)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-colors
+                    ${u.active === 'true' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}
+                >
+                  {u.active === 'true' ? '✅ Active' : '⭕ Inactive'}
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </AppLayout>
+    </>
+  );
+}
+
+export default withAuth(AdminUsers, [ROLES.ADMIN]);
