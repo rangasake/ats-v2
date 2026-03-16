@@ -156,6 +156,7 @@ function NewInspection() {
             data={visualData}
             laneType={vehicleData.lane_type}
             hiddenItems={laneConfig.visual_hidden}
+            inspectionId={inspectionId}
             onSave={handleStep3}
             onBack={() => setStep(2)}
             loading={loading}

@@ -47,7 +47,7 @@ function Dashboard() {
         {(user?.role === ROLES.INSPECTOR || user?.role === ROLES.ADMIN) && (
           <Link href="/inspection/new">
             <div className="bg-blue-600 text-white rounded-2xl p-4 mb-4 flex items-center gap-3 active:scale-98 transition-transform shadow-lg">
-              <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center text-2xl">➕</div>
+              <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center text-2xl">➕</div>
               <div>
                 <div className="font-bold text-base">New Inspection</div>
                 <div className="text-blue-200 text-sm">Start vehicle fitness check</div>
@@ -57,7 +57,7 @@ function Dashboard() {
         )}
 
         {/* Stats */}
-        <div className="grid grid-cols-2 gap-3 mb-4">
+        <div className="grid grid-cols-4 gap-3 mb-4">
           {Object.entries(counts).map(([status, count]) => {
             const icons = { Draft: '✏️', Pending: '⏳', Approved: '✅', Rejected: '❌' };
             const colors = { Draft: 'bg-gray-50', Pending: 'bg-yellow-50', Approved: 'bg-green-50', Rejected: 'bg-red-50' };

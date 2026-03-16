@@ -29,6 +29,22 @@ export default function Step2DocumentChecklist({ data, laneType, hiddenItems = [
     ...data,
   });
 
+  // Fetch insurance companies from Google Sheets (falls back to constants if empty/error)
+  const [insuranceCompanies, setInsuranceCompanies] = useState(INSURANCE_COMPANIES);
+  const [insuranceLoading, setInsuranceLoading] = useState(true);
+
+  useEffect(() => {
+    fetch('/api/insurance/list')
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.companies && d.companies.length > 0) {
+          setInsuranceCompanies(d.companies);
+        }
+      })
+      .catch(() => {/* keep fallback */})
+      .finally(() => setInsuranceLoading(false));
+  }, []);
+
   const visibleItems = DOC_CHECKLIST_ITEMS.filter((item) => shouldShowItem(item, laneType, hiddenItems));
 
   function set(field, value) {
@@ -72,10 +88,10 @@ export default function Step2DocumentChecklist({ data, laneType, hiddenItems = [
               <SearchableDropdown
                 key={item.id}
                 label={item.label}
-                options={INSURANCE_COMPANIES}
+                options={insuranceCompanies}
                 value={form[item.id]}
                 onChange={(v) => set(item.id, v)}
-                placeholder="Select company..."
+                placeholder={insuranceLoading ? 'Loading companies...' : 'Select company...'}
               />
             );
           }

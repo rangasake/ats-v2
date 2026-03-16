@@ -21,7 +21,9 @@ export default function AppLayout({ children, title }) {
     }
     if (user.role === ROLES.ADMIN) {
       links.push({ href: '/admin/users', label: '👥 Users' });
+      links.push({ href: '/admin/staff', label: '👷 Staff' });
       links.push({ href: '/admin/lane-config', label: '⚙️ Lane Config' });
+      links.push({ href: '/admin/devices', label: '📱 Devices' });
     }
     return links;
   };
