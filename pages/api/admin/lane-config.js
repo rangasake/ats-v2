@@ -36,4 +36,4 @@ async function handler(req, res) {
   return res.status(405).end();
 }
 
-export default requireAuth(handler, ['Admin']);
+export default requireAuth(handler, ['Admin', 'Inspector', 'Supervisor']);
