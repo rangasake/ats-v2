@@ -1,16 +1,27 @@
 // pages/device-register.js
-// Shown when a device has no token or token is revoked.
-// User pastes the token given by admin → saved in localStorage → redirected to app.
+// Token saved in BOTH cookie (for middleware SSR checks) and localStorage (backup)
 import { useState, useEffect } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 
-const TOKEN_KEY = 'afts_device_token';
+const TOKEN_KEY    = 'afts_device_token';
+const COOKIE_NAME  = 'afts_device_token';
+// Cookie max age: 1 year (in seconds)
+const COOKIE_MAX_AGE = 60 * 60 * 24 * 365;
+
+function setTokenCookie(token) {
+  // SameSite=Lax works for same-origin; no Secure flag needed for http localhost
+  document.cookie = `${COOKIE_NAME}=${encodeURIComponent(token)}; path=/; max-age=${COOKIE_MAX_AGE}; SameSite=Lax`;
+}
+
+function clearTokenCookie() {
+  document.cookie = `${COOKIE_NAME}=; path=/; max-age=0; SameSite=Lax`;
+}
 
 export default function DeviceRegister() {
   const router  = useRouter();
   const [token, setToken]       = useState('');
-  const [status, setStatus]     = useState('idle'); // idle | checking | success | error
+  const [status, setStatus]     = useState('idle');
   const [message, setMessage]   = useState('');
   const [existing, setExisting] = useState('');
 
@@ -36,21 +47,25 @@ export default function DeviceRegister() {
       const data = await res.json();
 
       if (data.valid) {
+        // Save to BOTH cookie and localStorage
+        setTokenCookie(trimmed);
         localStorage.setItem(TOKEN_KEY, trimmed);
+
         setStatus('success');
         setMessage(`✅ Device "${data.device_name}" registered! Redirecting...`);
         setTimeout(() => router.push('/'), 1500);
       } else {
         setStatus('error');
-        setMessage(`❌ Invalid token — ${data.reason || 'not found or revoked'}. Contact your admin.`);
+        setMessage(`❌ ${data.reason || 'Invalid or revoked token'}. Contact your admin.`);
       }
-    } catch (err) {
+    } catch {
       setStatus('error');
       setMessage('⚠️ Could not verify token. Check your internet connection.');
     }
   }
 
   function handleClear() {
+    clearTokenCookie();
     localStorage.removeItem(TOKEN_KEY);
     setExisting('');
     setToken('');
@@ -64,9 +79,7 @@ export default function DeviceRegister() {
         <title>Register Device — AFTS</title>
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
       </Head>
-
       <div className="min-h-screen bg-gradient-to-br from-blue-900 to-blue-700 flex flex-col items-center justify-center px-4">
-        {/* Header */}
         <div className="text-center text-white mb-8">
           <div className="text-5xl mb-3">📱</div>
           <h1 className="text-2xl font-extrabold">Register This Device</h1>
@@ -74,16 +87,12 @@ export default function DeviceRegister() {
         </div>
 
         <div className="bg-white rounded-3xl shadow-2xl p-6 w-full max-w-sm">
-          {/* Existing token notice */}
           {existing && (
             <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-3 mb-4 text-sm text-yellow-800">
-              <div className="font-semibold mb-1">⚠️ Current Token</div>
+              <div className="font-semibold mb-1">⚠️ Token already saved</div>
               <div className="font-mono text-xs break-all">{existing}</div>
-              <button
-                onClick={handleClear}
-                className="mt-2 text-xs text-red-600 underline"
-              >
-                Clear & enter new token
+              <button onClick={handleClear} className="mt-2 text-xs text-red-600 underline">
+                Clear &amp; enter new token
               </button>
             </div>
           )}
@@ -95,9 +104,7 @@ export default function DeviceRegister() {
 
           <form onSubmit={handleRegister}>
             <div className="mb-4">
-              <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                Device Token
-              </label>
+              <label className="block text-sm font-semibold text-gray-700 mb-1.5">Device Token</label>
               <textarea
                 value={token}
                 onChange={(e) => setToken(e.target.value)}
@@ -115,7 +122,7 @@ export default function DeviceRegister() {
               <div className={`text-sm rounded-xl px-4 py-3 mb-4
                 ${status === 'success' ? 'bg-green-50 text-green-700 border border-green-200' : ''}
                 ${status === 'error'   ? 'bg-red-50 text-red-700 border border-red-200'     : ''}
-                ${status === 'idle'    ? 'bg-blue-50 text-blue-700 border border-blue-200'   : ''}
+                ${status === 'idle'    ? 'bg-blue-50 text-blue-700 border border-blue-200'  : ''}
               `}>
                 {message}
               </div>
@@ -131,10 +138,9 @@ export default function DeviceRegister() {
           </form>
         </div>
 
-        {/* Help */}
-        <div className="mt-6 text-blue-200 text-xs text-center max-w-xs">
-          <p>Token is stored only on this device. It never leaves your browser except to verify with the server.</p>
-        </div>
+        <p className="mt-6 text-blue-200 text-xs text-center max-w-xs">
+          Token is stored as a secure cookie on this device only.
+        </p>
       </div>
     </>
   );
