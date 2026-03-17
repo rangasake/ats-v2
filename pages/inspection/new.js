@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import AppLayout from '../../components/layout/AppLayout';
@@ -17,20 +17,84 @@ function NewInspection() {
   const [step, setStep] = useState(1);
   const [inspectionId, setInspectionId] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [resumeLoading, setResumeLoading] = useState(false);
   const [error, setError] = useState('');
 
-  // Form data per step
   const [vehicleData, setVehicleData] = useState({});
   const [docData, setDocData] = useState({});
   const [visualData, setVisualData] = useState({});
   const [laneConfig, setLaneConfig] = useState({ doc_hidden: [], visual_hidden: [] });
 
-  // ── Step 1: Save vehicle + start inspection ──────────────────────────────
+  // ── Resume draft when ?resume=ID present ──────────────────────────────────
+  useEffect(() => {
+    if (!router.isReady) return;
+    const resumeId = router.query.resume;
+    if (resumeId) loadDraft(resumeId);
+  }, [router.isReady, router.query.resume]);
+
+  async function loadDraft(id) {
+    setResumeLoading(true);
+    setError('');
+    try {
+      // 1. Fetch inspection record
+      const iRes  = await fetch(`/api/inspection/get?id=${id}`);
+      const iData = await iRes.json();
+      if (!iData.inspection) throw new Error('Draft inspection not found');
+      const insp = iData.inspection;
+      setInspectionId(insp.inspection_id);
+
+      // 2. Fetch vehicle data
+      const vRes  = await fetch(`/api/vehicle/search?vehicle_number=${insp.vehicle_number}`);
+      const vData = await vRes.json();
+      if (!vData.found) throw new Error('Vehicle not found for this draft');
+      const vehicle = vData.vehicle;
+      setVehicleData(vehicle);
+
+      // 3. Lane config
+      const cfgRes  = await fetch('/api/admin/lane-config');
+      const cfgData = await cfgRes.json();
+      const cfg     = (cfgData.configs || []).find((c) => c.lane_type === vehicle.lane_type);
+      setLaneConfig({
+        doc_hidden:    cfg ? tryParse(cfg.doc_hidden_items, [])    : [],
+        visual_hidden: cfg ? tryParse(cfg.visual_hidden_items, []) : [],
+      });
+
+      // 4. Restore step-2 doc fields
+      setDocData({
+        test_date:         insp.test_date         || '',
+        test_type:         insp.test_type         || '',
+        afms_free_receipt: insp.afms_free_receipt || '',
+        rc:                insp.rc                || '',
+        last_rc:           insp.last_rc           || '',
+        last_rc_expiry:    insp.last_rc_expiry    || '',
+        puc:               insp.puc               || '',
+        puc_expiry:        insp.puc_expiry        || '',
+        insurance:         insp.insurance         || '',
+        insurance_expiry:  insp.insurance_expiry  || '',
+        insurance_company: insp.insurance_company || '',
+        speed_governor:    insp.speed_governor    || '',
+        vlt_device:        insp.vlt_device        || '',
+      });
+
+      // 5. Restore step-3 visual data
+      setVisualData(insp.visual_data ? tryParse(insp.visual_data, {}) : {});
+
+      // 6. Jump to next incomplete step
+      const savedStep = parseInt(insp.step || '1', 10);
+      setStep(Math.min(savedStep + 1, 4));
+
+    } catch (e) {
+      setError(`Could not load draft: ${e.message}`);
+    } finally {
+      setResumeLoading(false);
+    }
+  }
+
+  // ── Step 1 ────────────────────────────────────────────────────────────────
   async function handleStep1(formData) {
     setLoading(true);
     setError('');
     try {
-      // Save vehicle to DB
       const vRes = await fetch('/api/vehicle/save', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -38,16 +102,15 @@ function NewInspection() {
       });
       if (!vRes.ok) throw new Error('Failed to save vehicle');
 
-      // Fetch lane config for this lane type
-      const cfgRes = await fetch('/api/admin/lane-config');
+      const cfgRes  = await fetch('/api/admin/lane-config');
       const cfgData = await cfgRes.json();
-      const cfg = (cfgData.configs || []).find((c) => c.lane_type === formData.lane_type);
-      const docHidden = cfg ? tryParse(cfg.doc_hidden_items, []) : [];
-      const visualHidden = cfg ? tryParse(cfg.visual_hidden_items, []) : [];
-      setLaneConfig({ doc_hidden: docHidden, visual_hidden: visualHidden });
+      const cfg     = (cfgData.configs || []).find((c) => c.lane_type === formData.lane_type);
+      setLaneConfig({
+        doc_hidden:    cfg ? tryParse(cfg.doc_hidden_items, [])    : [],
+        visual_hidden: cfg ? tryParse(cfg.visual_hidden_items, []) : [],
+      });
 
-      // Create inspection record (step 1)
-      const iRes = await fetch('/api/inspection/save', {
+      const iRes  = await fetch('/api/inspection/save', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ step: 1, vehicle_number: formData.vehicle_number }),
@@ -65,7 +128,7 @@ function NewInspection() {
     }
   }
 
-  // ── Step 2: Save doc checklist ───────────────────────────────────────────
+  // ── Step 2 ────────────────────────────────────────────────────────────────
   async function handleStep2(formData) {
     setLoading(true);
     setError('');
@@ -84,18 +147,34 @@ function NewInspection() {
     }
   }
 
-  // ── Step 3: Save visual checklist ────────────────────────────────────────
+  // ── Step 3 ────────────────────────────────────────────────────────────────
   async function handleStep3(formData) {
     setLoading(true);
     setError('');
     try {
+      // Separate image URLs from visual checklist data
+      const { uploaded_images, ...visualChecklist } = formData;
+
+      // uploaded_images = JSON string of [{ directUrl, viewUrl, label, ... }]
+      // Extract just the direct URLs as a clean comma-separated string for easy reading in Sheets
+      let imageUrlsFlat = '';
+      let imageUrlsJson = uploaded_images || '';
+      if (uploaded_images) {
+        try {
+          const parsed = JSON.parse(uploaded_images);
+          imageUrlsFlat = parsed.map((img) => img.directUrl).filter(Boolean).join(', ');
+        } catch {}
+      }
+
       await fetch('/api/inspection/save', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          inspection_id: inspectionId,
-          step: 3,
-          visual_data: JSON.stringify(formData),
+          inspection_id:  inspectionId,
+          step:           3,
+          visual_data:    JSON.stringify(visualChecklist), // checklist only
+          image_urls:     imageUrlsFlat,                  // comma-separated URLs — easy to read in Sheets
+          image_urls_json: imageUrlsJson,                 // full JSON with labels, dimensions etc.
         }),
       });
       setVisualData(formData);
@@ -107,7 +186,7 @@ function NewInspection() {
     }
   }
 
-  // ── Step 4: Submit ───────────────────────────────────────────────────────
+  // ── Step 4 ────────────────────────────────────────────────────────────────
   async function handleSubmit(formData) {
     setLoading(true);
     setError('');
@@ -126,10 +205,32 @@ function NewInspection() {
     }
   }
 
+  // ── Loading state while restoring draft ───────────────────────────────────
+  if (resumeLoading) {
+    return (
+      <AppLayout title="Resuming Draft...">
+        <div className="flex flex-col items-center justify-center py-20 text-gray-500">
+          <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-4" />
+          <p className="font-semibold text-gray-700">Loading draft inspection...</p>
+          <p className="text-xs text-gray-400 mt-1">Restoring your saved progress</p>
+        </div>
+      </AppLayout>
+    );
+  }
+
   return (
     <>
-      <Head><title>New Inspection - AFTS</title></Head>
-      <AppLayout title="New Inspection">
+      <Head><title>{router.query.resume ? 'Resume Inspection' : 'New Inspection'} - AFTS</title></Head>
+      <AppLayout title={router.query.resume ? `Resume: ${router.query.resume}` : 'New Inspection'}>
+
+        {/* Resume banner */}
+        {router.query.resume && !resumeLoading && (
+          <div className="bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 mb-4 flex items-center gap-2 text-sm text-blue-700">
+            <span>✏️</span>
+            <span>Resuming draft <strong>{router.query.resume}</strong> — continue from where you left off</span>
+          </div>
+        )}
+
         <StepIndicator currentStep={step} steps={STEPS} />
 
         {error && (
@@ -146,6 +247,7 @@ function NewInspection() {
             data={docData}
             laneType={vehicleData.lane_type}
             hiddenItems={laneConfig.doc_hidden}
+            vehicleData={vehicleData}
             onSave={handleStep2}
             onBack={() => setStep(1)}
             loading={loading}
@@ -157,6 +259,7 @@ function NewInspection() {
             laneType={vehicleData.lane_type}
             hiddenItems={laneConfig.visual_hidden}
             inspectionId={inspectionId}
+            vehicleData={vehicleData}
             onSave={handleStep3}
             onBack={() => setStep(2)}
             loading={loading}

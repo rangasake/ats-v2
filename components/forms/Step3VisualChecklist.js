@@ -13,7 +13,7 @@ function shouldShowItem(item, laneType, hiddenItems = []) {
 }
 
 // ── CHANGED: added inspectionId prop ──────────────────────────
-export default function Step3VisualChecklist({ data, laneType, hiddenItems = [], inspectionId, onSave, onBack, loading }) {
+export default function Step3VisualChecklist({ data, laneType, hiddenItems = [], inspectionId, vehicleData, onSave, onBack, loading }) {
   const [form, setForm] = useState(() => {
     const initial = {};
     VISUAL_CHECKLIST_ITEMS.forEach((item) => { initial[item.id] = ''; });
@@ -59,12 +59,13 @@ export default function Step3VisualChecklist({ data, laneType, hiddenItems = [],
       <div className="card mb-4">
         <h2 className="section-title">🔍 Visual Test Checklist</h2>
         <p className="text-xs text-blue-600 bg-blue-50 rounded-lg px-3 py-2 mb-4">
-          Lane Type: <strong>{laneType}</strong>
+        Vehicle number <strong>{vehicleData.vehicle_number} </strong> |  Lane type: <strong>{laneType}</strong> 
         </p>
 
         {/* ── NEW: Image upload section ── */}
         <ImageUploader
           inspectionId={inspectionId}
+          vehicleNumber={vehicleData.vehicle_number}
           onUploadComplete={handleUploadComplete}
           existingUrls={uploadedImages}
         />

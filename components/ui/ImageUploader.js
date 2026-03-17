@@ -135,7 +135,7 @@ function ImageSlot({ slot, index, onRemove }) {
 }
 
 // ── Main component ────────────────────────────────────────────
-export default function ImageUploader({ inspectionId, onUploadComplete, existingUrls = [] }) {
+export default function ImageUploader({ inspectionId, vehicleNumber, onUploadComplete, existingUrls = [] }) {
   const [slots, setSlots]           = useState(
     // Pre-fill with any already-uploaded URLs (e.g. resume)
     existingUrls.map((u, i) => ({ dataUrl: u.directUrl, label: u.label || `Image ${i+1}`, sizeBytes: 0, status: 'done', ...u }))
@@ -215,7 +215,7 @@ export default function ImageUploader({ inspectionId, onUploadComplete, existing
       const res  = await fetch('/api/inspection/upload-images', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ inspection_id: inspectionId, images }),
+        body: JSON.stringify({ inspection_id: inspectionId, vehicle_number: vehicleNumber || '', images }),
       });
       const data = await res.json();
 
