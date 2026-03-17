@@ -11,7 +11,7 @@ function shouldShowItem(item, laneType, hiddenItems = []) {
   return true;
 }
 
-export default function Step2DocumentChecklist({ data, vehicleData, laneType, hiddenItems = [], onSave, onBack, loading }) {
+export default function Step2DocumentChecklist({ data, vehicleNumber, laneType, hiddenItems = [], onSave, onBack, loading }) {
   const [form, setForm] = useState({
     test_date: '',
     test_type: '',
@@ -54,14 +54,17 @@ export default function Step2DocumentChecklist({ data, vehicleData, laneType, hi
   function handleSave() {
     onSave(form);
   }
-
+console.log('vehicleData', vehicleNumber)
   return (
     <div>
       <div className="card mb-4">
         <h2 className="section-title">📄 Document Checklist</h2>
+                {vehicleNumber && (
         <p className="text-xs text-blue-600 bg-blue-50 rounded-lg px-3 py-2 mb-4">
-        Vehicle number <strong>{vehicleData.vehicle_number} </strong> |  Lane type: <strong>{laneType}</strong>
+        
+        Vehicle number <strong>{vehicleNumber} </strong> |  Lane type: <strong>{laneType}</strong> 
         </p>
+ )}
 
         {visibleItems.map((item) => {
           if (item.type === 'date_only') {

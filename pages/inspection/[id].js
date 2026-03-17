@@ -156,6 +156,7 @@ function InspectionDetail() {
 
         {/* Action Buttons */}
         <div className="space-y-3 mt-4 no-print">
+
           {/* Continue if draft */}
           {inspection.status === INSPECTION_STATUS.DRAFT && (user?.role === ROLES.INSPECTOR || user?.role === ROLES.ADMIN) && (
             <button
@@ -164,6 +165,32 @@ function InspectionDetail() {
             >
               ✏️ Continue Inspection
             </button>
+          )}
+
+          {/* Inspector: edit & resubmit rejected entry */}
+          {inspection.status === INSPECTION_STATUS.REJECTED && (user?.role === ROLES.INSPECTOR || user?.role === ROLES.ADMIN) && (
+            <div className="bg-red-50 border border-red-200 rounded-2xl p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-lg">❌</span>
+                <span className="font-bold text-red-800">Rejected by Supervisor</span>
+              </div>
+              {inspection.supervisor_remarks && (
+                <p className="text-sm text-red-700 mb-3 bg-red-100 rounded-xl px-3 py-2">
+                  💬 Reason: <strong>{inspection.supervisor_remarks}</strong>
+                </p>
+              )}
+              <button
+                onClick={() => router.push(`/inspection/new?resume=${id}`)}
+                className="w-full py-3 bg-orange-500 text-white rounded-xl font-bold text-sm active:scale-95 transition-all"
+              >
+                ✏️ Edit & Resubmit
+              </button>
+            </div>
+          )}
+
+          {/* Supervisor: reopen rejected entry back to Draft */}
+          {inspection.status === INSPECTION_STATUS.REJECTED && (user?.role === ROLES.SUPERVISOR || user?.role === ROLES.ADMIN) && (
+            <ReopenButton inspectionId={id} onDone={fetchData} />
           )}
 
           {/* Supervisor review button */}
@@ -209,17 +236,94 @@ function Section({ title, children }) {
 function InfoRow({ label, value, highlight }) {
   if (!value) return null;
   const isYes = value === 'Yes';
-  const isNo = value === 'No';
+  const isNo  = value === 'No';
   return (
     <div className="flex justify-between items-center py-2 border-b border-gray-50 last:border-0 gap-3">
       <span className="text-sm text-gray-600 flex-1">{label}</span>
       <span className={`text-sm font-semibold text-right
         ${highlight && isYes ? 'text-green-600' : ''}
-        ${highlight && isNo ? 'text-red-500' : ''}
-        ${!highlight ? 'text-gray-800' : ''}
+        ${highlight && isNo  ? 'text-red-500'   : ''}
+        ${!highlight         ? 'text-gray-800'  : ''}
       `}>
         {value}
       </span>
+    </div>
+  );
+}
+
+// ── Supervisor reopen button with confirm + optional note ─────────────────────
+function ReopenButton({ inspectionId, onDone }) {
+  const [open, setOpen]         = useState(false);
+  const [note, setNote]         = useState('');
+  const [loading, setLoading]   = useState(false);
+  const [error, setError]       = useState('');
+
+  async function handleReopen() {
+    setLoading(true);
+    setError('');
+    try {
+      const res  = await fetch('/api/supervisor/review', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({
+          inspection_id:      inspectionId,
+          action:             'reopen',
+          supervisor_remarks: note,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to reopen');
+      setOpen(false);
+      onDone && onDone();
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  if (!open) {
+    return (
+      <button
+        onClick={() => setOpen(true)}
+        className="w-full py-3 border-2 border-orange-400 text-orange-700 bg-orange-50 rounded-xl font-bold text-sm active:scale-95 transition-all"
+      >
+        🔄 Re-open for Inspector Edit
+      </button>
+    );
+  }
+
+  return (
+    <div className="bg-orange-50 border border-orange-300 rounded-2xl p-4">
+      <p className="text-sm font-bold text-orange-800 mb-2">
+        Re-open this inspection?
+      </p>
+      <p className="text-xs text-orange-700 mb-3">
+        Status will change to <strong>Draft</strong>. Inspector can edit and resubmit.
+      </p>
+      <textarea
+        value={note}
+        onChange={(e) => setNote(e.target.value)}
+        placeholder="Note for inspector (optional)..."
+        className="w-full border border-orange-300 rounded-xl px-3 py-2 text-sm mb-3 focus:outline-none focus:ring-2 focus:ring-orange-400"
+        rows={2}
+      />
+      {error && <p className="text-xs text-red-600 mb-2">⚠️ {error}</p>}
+      <div className="flex gap-2">
+        <button
+          onClick={() => { setOpen(false); setNote(''); setError(''); }}
+          className="flex-1 py-2.5 rounded-xl border border-gray-300 text-gray-600 text-sm font-semibold"
+        >
+          Cancel
+        </button>
+        <button
+          onClick={handleReopen}
+          disabled={loading}
+          className="flex-1 py-2.5 rounded-xl bg-orange-500 text-white text-sm font-bold disabled:opacity-50"
+        >
+          {loading ? 'Processing...' : 'Confirm Re-open'}
+        </button>
+      </div>
     </div>
   );
 }

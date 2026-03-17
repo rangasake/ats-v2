@@ -48,7 +48,7 @@ function NewInspection() {
       const vData = await vRes.json();
       if (!vData.found) throw new Error('Vehicle not found for this draft');
       const vehicle = vData.vehicle;
-      setVehicleData(vehicle);
+      setVehicleData({ ...vehicle, status: insp.status });
 
       // 3. Lane config
       const cfgRes  = await fetch('/api/admin/lane-config');
@@ -79,9 +79,14 @@ function NewInspection() {
       // 5. Restore step-3 visual data
       setVisualData(insp.visual_data ? tryParse(insp.visual_data, {}) : {});
 
-      // 6. Jump to next incomplete step
-      const savedStep = parseInt(insp.step || '1', 10);
-      setStep(Math.min(savedStep + 1, 4));
+      // 6. Rejected → always go to Step 1 so inspector reviews everything from scratch
+      //    Draft → jump to next incomplete step
+      if (insp.status === 'Rejected') {
+        setStep(1);
+      } else {
+        const savedStep = parseInt(insp.step || '1', 10);
+        setStep(Math.min(savedStep + 1, 4));
+      }
 
     } catch (e) {
       setError(`Could not load draft: ${e.message}`);
@@ -223,11 +228,20 @@ function NewInspection() {
       <Head><title>{router.query.resume ? 'Resume Inspection' : 'New Inspection'} - AFTS</title></Head>
       <AppLayout title={router.query.resume ? `Resume: ${router.query.resume}` : 'New Inspection'}>
 
-        {/* Resume banner */}
+        {/* Resume / resubmit banner */}
         {router.query.resume && !resumeLoading && (
-          <div className="bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 mb-4 flex items-center gap-2 text-sm text-blue-700">
-            <span>✏️</span>
-            <span>Resuming draft <strong>{router.query.resume}</strong> — continue from where you left off</span>
+          <div className={`rounded-xl px-4 py-3 mb-4 flex items-center gap-2 text-sm
+            ${vehicleData.status === 'Rejected'
+              ? 'bg-orange-50 border border-orange-300 text-orange-800'
+              : 'bg-blue-50 border border-blue-200 text-blue-700'
+            }`}>
+            <span>{vehicleData.status === 'Rejected' ? '⚠️' : '✏️'}</span>
+            <span>
+              {vehicleData.status === 'Rejected'
+                ? <>Editing <strong>rejected</strong> inspection <strong>{router.query.resume}</strong> — fix and resubmit</>
+                : <>Resuming draft <strong>{router.query.resume}</strong> — continue from where you left off</>
+              }
+            </span>
           </div>
         )}
 
@@ -246,8 +260,9 @@ function NewInspection() {
           <Step2DocumentChecklist
             data={docData}
             laneType={vehicleData.lane_type}
+            vehicleNumber={vehicleData.vehicle_number}
+            vehicleLane={vehicleData.vehicle_lane}
             hiddenItems={laneConfig.doc_hidden}
-            vehicleData={vehicleData}
             onSave={handleStep2}
             onBack={() => setStep(1)}
             loading={loading}
@@ -259,7 +274,8 @@ function NewInspection() {
             laneType={vehicleData.lane_type}
             hiddenItems={laneConfig.visual_hidden}
             inspectionId={inspectionId}
-            vehicleData={vehicleData}
+            vehicleNumber={vehicleData.vehicle_number}
+            vehicleLane={vehicleData.vehicle_lane}
             onSave={handleStep3}
             onBack={() => setStep(2)}
             loading={loading}

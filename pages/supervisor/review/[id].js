@@ -20,6 +20,7 @@ function SupervisorReview() {
   const [agentPhone, setAgentPhone] = useState('');
   const [agentName, setAgentName] = useState('');
   const [agentLookingUp, setAgentLookingUp] = useState(false);
+  const [bookingId, setBookingId] = useState('');
   const [remarks, setRemarks] = useState('');
   const [error, setError] = useState('');
 
@@ -68,6 +69,7 @@ function SupervisorReview() {
           action,
           agent_phone: agentPhone,
           agent_name: agentName,
+          booking_id: bookingId.trim().toUpperCase(),
           supervisor_remarks: remarks,
         }),
       });
@@ -187,6 +189,21 @@ function SupervisorReview() {
           </div>
 
           <div className="mb-4">
+            <label className="form-label">
+              Booking ID <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              value={bookingId}
+              onChange={(e) => setBookingId(e.target.value.toUpperCase())}
+              className="form-input font-mono tracking-widest"
+              placeholder="e.g. BK2026001"
+              maxLength={20}
+            />
+            <p className="text-xs text-gray-400 mt-1">Enter the Booking ID manually (required to approve)</p>
+          </div>
+
+          <div className="mb-4">
             <label className="form-label">Supervisor Remarks</label>
             <textarea
               value={remarks}
@@ -207,7 +224,13 @@ function SupervisorReview() {
         {/* Action Buttons */}
         <div className="space-y-3">
           <button
-            onClick={() => handleAction('approve')}
+            onClick={() => {
+              if (!bookingId.trim()) {
+                setError('Booking ID is required to approve.');
+                return;
+              }
+              handleAction('approve');
+            }}
             disabled={submitting}
             className="btn-success"
           >

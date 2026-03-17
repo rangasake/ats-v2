@@ -3,7 +3,6 @@ import Head from 'next/head';
 import AppLayout from '../../components/layout/AppLayout';
 import { withAuth } from '../../lib/useAuth';
 import { ROLES } from '../../lib/constants';
-import { getRows, appendRow, updateRow } from '../../lib/googleSheets';
 
 // Client-side page — calls API
 function AdminStaff() {
