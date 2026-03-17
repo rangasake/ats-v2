@@ -1,35 +1,36 @@
 // middleware.js — Device Token Guard (cookie-based)
-// Token stored in cookie 'afts_device_token' — sent on EVERY request including SSR
-// Falls back to header 'x-device-token' for API calls from fetch
-
 import { NextResponse } from 'next/server';
 
+// ── Public paths — always allowed, no token needed ───────────────────────────
 const PUBLIC_PATHS = [
-  '/device-register',
-  '/api/devices/verify',
+  '/',                      // login page
+  '/device-register',       // token registration
+  '/api/auth/login',        // login API — must be public
+  '/api/auth/logout',       // logout
+  '/api/auth/me',           // session check
+  '/api/devices/verify',    // verify endpoint itself
   '/_next',
   '/favicon.ico',
 ];
 
-const TOKEN_COOKIE  = 'afts_device_token';
-const TOKEN_HEADER  = 'x-device-token';
+const TOKEN_COOKIE   = 'afts_device_token';
+const TOKEN_HEADER   = 'x-device-token';
+const CACHE_TTL      = 5 * 60 * 1000; // 5 min
 
-// ── Cache ────────────────────────────────────────────────────────────────────
-const cache     = new Map();
-const CACHE_TTL = 5 * 60 * 1000;
-
+// ── In-memory cache ───────────────────────────────────────────────────────────
+const cache = new Map();
 function getCached(token) {
-  const entry = cache.get(token);
-  if (!entry) return null;
-  if (Date.now() > entry.expires) { cache.delete(token); return null; }
-  return entry;
+  const e = cache.get(token);
+  if (!e) return null;
+  if (Date.now() > e.expires) { cache.delete(token); return null; }
+  return e;
 }
 function setCache(token, data) {
   cache.set(token, { ...data, expires: Date.now() + CACHE_TTL });
   if (cache.size > 200) cache.delete(cache.keys().next().value);
 }
 
-// ── Blocked page ─────────────────────────────────────────────────────────────
+// ── Blocked HTML page ─────────────────────────────────────────────────────────
 function blockedHtml(reason, deviceName) {
   return `<!DOCTYPE html><html lang="en"><head>
     <meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
@@ -63,45 +64,57 @@ function blockedHtml(reason, deviceName) {
 export async function middleware(req) {
   const { pathname } = req.nextUrl;
 
-  // Always allow public paths
-  if (PUBLIC_PATHS.some((p) => pathname.startsWith(p))) {
+  // 1. Always allow public paths (exact or prefix match)
+  if (PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(p + '/'))) {
     return NextResponse.next();
   }
 
-  // Read token from cookie first, then header fallback
+  // 2. Localhost bypass — controlled by env var
+  //    Set DISABLE_DEVICE_CHECK=true in .env.local to bypass on localhost
+  //    By default localhost is NOT bypassed so you can test properly
+  const host          = req.headers.get('host') || '';
+  const isLocalhost   = host.startsWith('localhost') || host.startsWith('127.0.0.1');
+  const bypassEnabled = process.env.DISABLE_DEVICE_CHECK === 'true';
+
+  if (isLocalhost && bypassEnabled) {
+    return NextResponse.next();
+  }
+
+  // 3. Read token — cookie (SSR) or header (fetch calls)
   const token =
     req.cookies.get(TOKEN_COOKIE)?.value ||
     req.headers.get(TOKEN_HEADER)        ||
     '';
 
-  const isApiRoute  = pathname.startsWith('/api/');
-  const isPageRoute = !isApiRoute;
+  const isApi = pathname.startsWith('/api/');
 
-  // No token → redirect page to register, block API
+  // 4. No token at all
   if (!token) {
-    if (isApiRoute) {
+    if (isApi) {
       return NextResponse.json(
         { error: 'Device not registered', code: 'NO_DEVICE_TOKEN' },
         { status: 403 }
       );
     }
-    return NextResponse.redirect(new URL('/device-register', req.url));
+    // Redirect to device-register, preserve intended destination
+    const url = new URL('/device-register', req.url);
+    url.searchParams.set('next', pathname);
+    return NextResponse.redirect(url);
   }
 
-  // Check cache
+  // 5. Check cache
   const cached = getCached(token);
   if (cached) {
     if (cached.valid) return NextResponse.next();
-    if (isApiRoute) return NextResponse.json({ error: 'Device not authorised' }, { status: 403 });
+    if (isApi) return NextResponse.json({ error: 'Device not authorised' }, { status: 403 });
     return new NextResponse(blockedHtml(cached.reason, cached.device_name), {
       status: 403, headers: { 'Content-Type': 'text/html' },
     });
   }
 
-  // Verify token via internal API
+  // 6. Verify against Google Sheets
   try {
-    const verifyUrl = new URL('/api/devices/verify', req.url);
-    const verifyRes = await fetch(verifyUrl.toString(), {
+    const verifyRes = await fetch(new URL('/api/devices/verify', req.url).toString(), {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
       body:    JSON.stringify({ token }),
@@ -111,18 +124,13 @@ export async function middleware(req) {
 
     if (data.valid) return NextResponse.next();
 
-    if (isApiRoute) {
-      return NextResponse.json({ error: 'Device not authorised', reason: data.reason }, { status: 403 });
-    }
+    if (isApi) return NextResponse.json({ error: 'Device not authorised', reason: data.reason }, { status: 403 });
     return new NextResponse(blockedHtml(data.reason, data.device_name), {
       status: 403, headers: { 'Content-Type': 'text/html' },
     });
   } catch (err) {
     console.error('[DEVICE-GUARD] verify error:', err.message);
-    // ALWAYS block on error in both dev and prod — do not silently pass through
-    if (isApiRoute) {
-      return NextResponse.json({ error: 'Device verification unavailable' }, { status: 503 });
-    }
+    if (isApi) return NextResponse.json({ error: 'Device verification unavailable' }, { status: 503 });
     return new NextResponse(blockedHtml('Verification service error — try again', ''), {
       status: 503, headers: { 'Content-Type': 'text/html' },
     });
