@@ -38,11 +38,13 @@ export default function LoginPage() {
         <title>AFTS - Login</title>
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
       </Head>
-      <div className="min-h-screen bg-gradient-to-br from-blue-800 to-blue-600 flex flex-col items-center justify-center px-4">
+      <div className="min-h-screen bg-gradient-to-l from-blue-800 to-blue-600 flex flex-col items-center justify-center px-4"  style={{
+    backgroundImage: "url('https://images.unsplash.com/photo-1507608869274-d3177c8bb4c7?q=80&w=2940&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D')", // put your image in /public/images
+  }}>
         {/* Logo / Header */}
         <div className="text-center text-white mb-8">
-          <div className="text-5xl mb-3">🚗</div>
-          <h1 className="text-2xl font-extrabold">AFTS Portal</h1>
+          <div className="text-5xl mb-3 animate-pulse">🚗</div>
+          <h1 className="text-2xl font-extrabold">ATS Portal</h1>
           <p className="text-blue-200 text-sm mt-1">Automated Vehicle Fitness Testing Station</p>
         </div>
 
@@ -97,7 +99,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={submitting || loading}
-              className="btn-primary"
+              className="btn-primary hover:btn-primary-hover "
             >
               {submitting ? '⏳ Signing in...' : '🔐 Sign In'}
             </button>
@@ -105,7 +107,7 @@ export default function LoginPage() {
         </div>
 
         <p className="text-blue-200 text-xs mt-6 text-center">
-          © {new Date().getFullYear()} AFTS Vehicle Fitness Testing Station
+          © {new Date().getFullYear()} Aamalapuram Vehicle Fitness Testing Station
         </p>
       </div>
     </>

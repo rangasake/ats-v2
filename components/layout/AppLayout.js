@@ -34,7 +34,7 @@ export default function AppLayout({ children, title }) {
       <nav className="bg-blue-700 text-white shadow-lg sticky top-0 z-40 no-print">
         <div className="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between">
           <div>
-            <div className="font-bold text-base leading-tight">🚗 AFTS</div>
+            <div className="font-bold text-base leading-tight">🚗 ATS</div>
             <div className="text-xs text-blue-200 leading-tight">Vehicle Fitness Testing</div>
           </div>
           <div className="flex items-center gap-3">
