@@ -1,5 +1,5 @@
 import { requireAuth } from '../../../lib/auth';
-import { findRow, appendRow, updateRow } from '../../../lib/googleSheets';
+import { ensureHeaders, findRow, appendRow, updateRow } from '../../../lib/googleSheets';
 import { SHEETS, INSPECTION_STATUS } from '../../../lib/constants';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -10,10 +10,23 @@ async function handler(req, res) {
   const now = new Date().toISOString();
 
   try {
+    await ensureHeaders(SHEETS.INSPECTIONS, ['lat_long']);
+
+    if (String(step) === '3' && !stepData.lat_long?.trim()) {
+      return res.status(400).json({ error: 'Device location is required' });
+    }
+
     if (inspection_id) {
       // Update existing
+      const existing = await findRow(SHEETS.INSPECTIONS, 'inspection_id', inspection_id);
+      if (!existing) return res.status(404).json({ error: 'Inspection not found' });
+      if (existing.inspector_username !== req.user.username && req.user.role !== 'Admin') {
+        return res.status(403).json({ error: 'Not authorized' });
+      }
+
       const updates = { ...stepData, step: String(step), updated_at: now };
-      await updateRow(SHEETS.INSPECTIONS, 'inspection_id', inspection_id, updates);
+      const ok = await updateRow(SHEETS.INSPECTIONS, 'inspection_id', inspection_id, updates);
+      if (!ok) return res.status(404).json({ error: 'Inspection not found' });
       return res.status(200).json({ success: true, inspection_id });
     } else {
       // Create new

@@ -19,7 +19,7 @@ function AdminStaff() {
   async function fetchStaff() {
     setLoading(true);
     try {
-      const res = await fetch('/api/staff/list');
+      const res = await fetch('/api/admin/staff');
       const data = await res.json();
       setStaff(data.staff || []);
     } catch (e) {}
@@ -46,6 +46,49 @@ function AdminStaff() {
     } finally {
       setSaving(false);
     }
+  }
+
+  async function updateStaffStatus(member, active) {
+    const nextActive = active ? 'true' : 'false';
+    setError('');
+    setSuccess('');
+    try {
+      const res = await fetch('/api/admin/staff', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: member.name, active: nextActive }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to update staff');
+      setSuccess(`${member.name} marked ${active ? 'active' : 'inactive'}`);
+      fetchStaff();
+    } catch (e) {
+      setError(e.message);
+    }
+  }
+
+  async function deleteStaff(member) {
+    if (!confirm(`Delete staff member "${member.name}"?`)) return;
+    setError('');
+    setSuccess('');
+    try {
+      const res = await fetch('/api/admin/staff', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: member.name, active: 'deleted' }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to delete staff');
+      setSuccess(`${member.name} deleted`);
+      fetchStaff();
+    } catch (e) {
+      setError(e.message);
+    }
+  }
+
+  function isActive(member) {
+    const value = String(member.active || 'true').trim().toLowerCase();
+    return ['true', 'active', 'yes', '1'].includes(value);
   }
 
   return (
@@ -94,16 +137,46 @@ function AdminStaff() {
           </div>
         ) : (
           <div className="space-y-3">
-            {staff.map((s, i) => (
-              <div key={i} className="card flex items-center gap-3">
+            {staff.map((s) => (
+              <div key={s.name} className="card flex items-center gap-3">
                 <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center text-lg">
                   {s.role === 'Incharge' ? '🧑‍💼' : '👷'}
                 </div>
                 <div className="flex-1">
-                  <div className="font-bold text-gray-800">{s.name}</div>
-                  <div className="text-xs text-gray-500">{s.role}</div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <div className="font-bold text-gray-800">{s.name}</div>
+                    <span className={`text-xs font-bold px-2 py-0.5 rounded-full
+                      ${isActive(s) ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}
+                    >
+                      {isActive(s) ? 'Active' : 'Inactive'}
+                    </span>
+                  </div>
+                  <div className="text-xs text-gray-500 mt-0.5">{s.role}</div>
                 </div>
-                <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full font-semibold">Active</span>
+                <div className="flex gap-2 flex-wrap justify-end">
+                  {!isActive(s) && (
+                    <button
+                      onClick={() => updateStaffStatus(s, true)}
+                      className="px-3 py-1.5 rounded-xl text-xs font-bold transition-colors bg-green-50 text-green-700 border border-green-200"
+                    >
+                      Active
+                    </button>
+                  )}
+                  {isActive(s) && (
+                    <button
+                      onClick={() => updateStaffStatus(s, false)}
+                      className="px-3 py-1.5 rounded-xl text-xs font-bold transition-colors bg-gray-100 text-gray-600 border border-gray-200"
+                    >
+                      Inactive
+                    </button>
+                  )}
+                  <button
+                    onClick={() => deleteStaff(s)}
+                    className="px-3 py-1.5 rounded-xl text-xs font-bold bg-red-50 text-red-600 border border-red-200"
+                  >
+                    Delete
+                  </button>
+                </div>
               </div>
             ))}
           </div>

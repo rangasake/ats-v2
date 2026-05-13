@@ -102,6 +102,7 @@ function InspectionDetail() {
           <Section title="🚗 Vehicle Information">
             <InfoRow label="Engine No." value={vehicle.engine_number} />
             <InfoRow label="Chassis No." value={vehicle.chassis_number} />
+            <InfoRow label="Meter Reading" value={vehicle.meter_reading ? `${vehicle.meter_reading} KM` : ''} />
             <InfoRow label="Owner" value={vehicle.owner_name} />
             <InfoRow label="Phone" value={vehicle.owner_phone} />
             <InfoRow label="Mandal / RTO" value={`${vehicle.mandal_name} / ${vehicle.rto_office}`} />
@@ -125,6 +126,7 @@ function InspectionDetail() {
         {/* Visual Checklist */}
         {Object.keys(visualData).length > 0 && (
           <Section title="🔍 Visual Test">
+            <InfoRow label="Device Location" value={inspection.lat_long} />
             {VISUAL_CHECKLIST_ITEMS.map((item) => {
               const val = visualData[item.id];
               if (!val) return null;

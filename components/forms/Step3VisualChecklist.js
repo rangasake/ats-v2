@@ -12,6 +12,15 @@ function shouldShowItem(item, laneType, hiddenItems = []) {
   return true;
 }
 
+function safeParseImages(str) {
+  try {
+    const parsed = JSON.parse(str);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
 // ── CHANGED: added inspectionId prop ──────────────────────────
 export default function Step3VisualChecklist({ data, laneType, hiddenItems = [], inspectionId, vehicleNumber, onSave, onBack, loading }) {
   const [form, setForm] = useState(() => {
@@ -20,11 +29,14 @@ export default function Step3VisualChecklist({ data, laneType, hiddenItems = [],
     return { ...initial, ...(data || {}) };
   });
 
-  // ── NEW: store Drive URLs returned from ImageUploader ────────
+  // ── NEW: store hosted image URLs returned from ImageUploader ────────
   const [uploadedImages, setUploadedImages] = useState(
-    data?.uploaded_images ? JSON.parse(data.uploaded_images) : []
+    data?.uploaded_images ? safeParseImages(data.uploaded_images) : []
   );
   const [imageError, setImageError] = useState('');
+  const [latLong, setLatLong] = useState(data?.lat_long || '');
+  const [locationLoading, setLocationLoading] = useState(false);
+  const [locationError, setLocationError] = useState('');
 
   const visibleItems = VISUAL_CHECKLIST_ITEMS.filter((item) => shouldShowItem(item, laneType, hiddenItems));
   const categories   = [...new Set(visibleItems.map((i) => i.category))];
@@ -33,10 +45,33 @@ export default function Step3VisualChecklist({ data, laneType, hiddenItems = [],
     setForm((prev) => ({ ...prev, [field]: value }));
   }
 
-  // Called by ImageUploader after successful Drive upload
+  // Called by ImageUploader after successful image upload
   function handleUploadComplete(uploaded) {
     setUploadedImages(uploaded);
     setImageError('');
+  }
+
+  function handlePinLocation() {
+    setLocationError('');
+
+    if (!navigator.geolocation) {
+      setLocationError('Location is not supported on this device.');
+      return;
+    }
+
+    setLocationLoading(true);
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        setLatLong(`${latitude.toFixed(6)},${longitude.toFixed(6)}`);
+        setLocationLoading(false);
+      },
+      (error) => {
+        setLocationError(error.message || 'Could not capture location.');
+        setLocationLoading(false);
+      },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+    );
   }
 
   function handleSave() {
@@ -46,10 +81,17 @@ export default function Step3VisualChecklist({ data, laneType, hiddenItems = [],
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
+    if (!latLong) {
+      setLocationError('Please pin the device location before continuing.');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
     setImageError('');
+    setLocationError('');
     // Pass visual checklist data + serialised image URLs to parent
     onSave({
       ...form,
+      lat_long: latLong,
       uploaded_images: JSON.stringify(uploadedImages),  // stored in Inspections sheet
     });
   }
@@ -71,6 +113,31 @@ export default function Step3VisualChecklist({ data, laneType, hiddenItems = [],
           onUploadComplete={handleUploadComplete}
           existingUrls={uploadedImages}
         />
+
+        <div className="mb-4">
+          <label className="form-label">
+            Device Location <span className="text-red-500">*</span>
+          </label>
+          <button
+            type="button"
+            onClick={handlePinLocation}
+            disabled={locationLoading}
+            className="w-full py-3 border-2 border-blue-300 rounded-xl text-sm font-semibold text-blue-700 bg-blue-50 active:scale-95 transition-all disabled:opacity-50"
+          >
+            {locationLoading ? 'Capturing Location...' : '📍 Pin Location'}
+          </button>
+          {latLong && (
+            <div className="mt-2 bg-green-50 border border-green-200 text-green-700 text-sm rounded-xl px-4 py-3">
+              <div className="font-semibold">Latitude / Longitude</div>
+              <div className="font-mono text-xs mt-1">{latLong}</div>
+            </div>
+          )}
+          {locationError && (
+            <div className="mt-2 bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl px-4 py-3">
+              ⚠️ {locationError}
+            </div>
+          )}
+        </div>
 
         {imageError && (
           <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl px-4 py-3 mb-4">

@@ -1,6 +1,6 @@
 // pages/api/inspection/upload-images.js
 // Storage: Cloudinary (free tier — 25 GB, 25k transforms/month)
-// No Google Drive quota issues. Drop-in replacement, same request/response format.
+// Avoids storage quota issues. Drop-in replacement, same request/response format.
 
 import { requireAuth } from '../../../lib/auth';
 

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { DOC_CHECKLIST_ITEMS, INSURANCE_COMPANIES, TEST_TYPES } from '../../lib/constants';
 import YesNoField from '../ui/YesNoField';
 import SearchableDropdown from '../ui/SearchableDropdown';
+import DateInput from '../ui/DateInput';
 
 function shouldShowItem(item, laneType, hiddenItems = []) {
   if (hiddenItems.includes(item.id)) return false;
@@ -71,7 +72,7 @@ console.log('vehicleData', vehicleNumber)
             return (
               <div key={item.id} className="mb-4">
                 <label className="form-label">{item.label} <span className="text-red-500">*</span></label>
-                <input type="date" value={form[item.id] || ''} onChange={(e) => set(item.id, e.target.value)} className="form-input" />
+                <DateInput value={form[item.id] || ''} onChange={(e) => set(item.id, e.target.value)} className="form-input" />
               </div>
             );
           }

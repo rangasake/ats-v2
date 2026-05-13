@@ -49,14 +49,47 @@ function AdminUsers() {
     }
   }
 
-  async function toggleActive(user) {
-    const newActive = user.active === 'true' ? 'false' : 'true';
-    await fetch('/api/admin/users', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username: user.username, active: newActive }),
-    });
-    fetchUsers();
+  function isActive(user) {
+    const value = String(user.active || 'true').trim().toLowerCase();
+    return ['true', 'active', 'yes', '1'].includes(value);
+  }
+
+  async function updateUserStatus(user, active) {
+    const nextActive = active ? 'true' : 'false';
+    setError('');
+    setSuccess('');
+    try {
+      const res = await fetch('/api/admin/users', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: user.username, active: nextActive }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to update user');
+      setSuccess(`${user.username} marked ${active ? 'active' : 'inactive'}`);
+      fetchUsers();
+    } catch (e) {
+      setError(e.message);
+    }
+  }
+
+  async function deleteUser(user) {
+    if (!confirm(`Delete user "${user.username}"?`)) return;
+    setError('');
+    setSuccess('');
+    try {
+      const res = await fetch('/api/admin/users', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: user.username, active: 'deleted' }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to delete user');
+      setSuccess(`${user.username} deleted`);
+      fetchUsers();
+    } catch (e) {
+      setError(e.message);
+    }
   }
 
   return (
@@ -120,16 +153,40 @@ function AdminUsers() {
             {users.map((u) => (
               <div key={u.username} className="card flex items-center justify-between gap-3">
                 <div>
-                  <div className="font-bold text-gray-800">{u.name || u.username}</div>
-                  <div className="text-xs text-gray-500">@{u.username} · {u.role}</div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <div className="font-bold text-gray-800">{u.name || u.username}</div>
+                    <span className={`text-xs font-bold px-2 py-0.5 rounded-full
+                      ${isActive(u) ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}
+                    >
+                      {isActive(u) ? 'Active' : 'Inactive'}
+                    </span>
+                  </div>
+                  <div className="text-xs text-gray-500 mt-0.5">@{u.username} · {u.role}</div>
                 </div>
-                <button
-                  onClick={() => toggleActive(u)}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-colors
-                    ${u.active === 'true' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}
-                >
-                  {u.active === 'true' ? '✅ Active' : '⭕ Inactive'}
-                </button>
+                <div className="flex gap-2 flex-wrap justify-end">
+                  {!isActive(u) && (
+                    <button
+                      onClick={() => updateUserStatus(u, true)}
+                      className="px-3 py-1.5 rounded-xl text-xs font-bold transition-colors bg-green-50 text-green-700 border border-green-200"
+                    >
+                      Active
+                    </button>
+                  )}
+                  {isActive(u) && (
+                    <button
+                      onClick={() => updateUserStatus(u, false)}
+                      className="px-3 py-1.5 rounded-xl text-xs font-bold transition-colors bg-gray-100 text-gray-600 border border-gray-200"
+                    >
+                      Inactive
+                    </button>
+                  )}
+                  <button
+                    onClick={() => deleteUser(u)}
+                    className="px-3 py-1.5 rounded-xl text-xs font-bold bg-red-50 text-red-600 border border-red-200"
+                  >
+                    Delete
+                  </button>
+                </div>
               </div>
             ))}
           </div>

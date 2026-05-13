@@ -2,11 +2,16 @@ import { requireAuth } from '../../../lib/auth';
 import { getRows } from '../../../lib/googleSheets';
 import { SHEETS } from '../../../lib/constants';
 
+function isActive(row) {
+  const value = String(row.active || 'true').trim().toLowerCase();
+  return ['true', 'active', 'yes', '1'].includes(value);
+}
+
 async function handler(req, res) {
   if (req.method !== 'GET') return res.status(405).end();
   try {
     const staff = await getRows(SHEETS.STAFF);
-    const active = staff.filter((s) => s.active?.toLowerCase() !== 'false');
+    const active = staff.filter(isActive);
     return res.status(200).json({ staff: active });
   } catch (err) {
     return res.status(500).json({ error: 'Server error' });

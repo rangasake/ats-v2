@@ -116,6 +116,7 @@ function SupervisorReview() {
             <Row label="Phone" value={vehicle.owner_phone} />
             <Row label="Engine No." value={vehicle.engine_number} />
             <Row label="Chassis No." value={vehicle.chassis_number} />
+            <Row label="Meter Reading" value={vehicle.meter_reading ? `${vehicle.meter_reading} KM` : ''} />
             <Row label="Mandal / RTO" value={`${vehicle.mandal_name} / ${vehicle.rto_office}`} />
           </div>
         )}
@@ -135,6 +136,7 @@ function SupervisorReview() {
         {Object.keys(visualData).length > 0 && (
           <div className="card mb-4">
             <h2 className="section-title">🔍 Visual Test</h2>
+            <Row label="Device Location" value={inspection.lat_long} />
             {VISUAL_CHECKLIST_ITEMS.map((item) => {
               const val = visualData[item.id];
               if (!val) return null;

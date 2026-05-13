@@ -368,6 +368,14 @@ const PrintLayout = forwardRef(function PrintLayout({ inspection, vehicle }, ref
             <td style={S.tdValue}>{vehicle.registration_date}</td>
           </tr>
           <tr>
+            <td style={S.tdLabel}>Meter Reading</td>
+            <td style={S.tdValue}>{vehicle.meter_reading ? `${vehicle.meter_reading} KM` : '—'}</td>
+            <td style={S.tdLabel}>Device Location</td>
+            <td style={S.tdValue}>{inspection.lat_long || '—'}</td>
+            <td style={S.tdLabel}></td>
+            <td style={S.tdValue}></td>
+          </tr>
+          <tr>
             <td style={S.tdLabel}>Mandal</td>
             <td style={S.tdValue}>{vehicle.mandal_name}</td>
             <td style={S.tdLabel}>RTO Office</td>

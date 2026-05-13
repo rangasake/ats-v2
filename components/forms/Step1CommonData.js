@@ -6,12 +6,27 @@ import {
   LANE_TYPES,
 } from "../../lib/constants";
 import SearchableDropdown from "../ui/SearchableDropdown";
+import DateInput from "../ui/DateInput";
+
+function normalizeDateForInput(value) {
+  if (!value) return "";
+
+  const str = String(value).trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(str)) return str;
+
+  const match = str.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/);
+  if (!match) return str;
+
+  const [, day, month, year] = match;
+  return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
+}
 
 export default function Step1CommonData({ data, onSave, loading }) {
   const [form, setForm] = useState({
     vehicle_number: "",
     engine_number: "",
     chassis_number: "",
+    meter_reading: "",
     owner_name: "",
     owner_phone: "",
     mandal_name: "",
@@ -20,6 +35,7 @@ export default function Step1CommonData({ data, onSave, loading }) {
     lane_type: "",
     registration_date: "",
     ...data,
+    registration_date: normalizeDateForInput(data?.registration_date),
   });
   const [searching, setSearching] = useState(false);
   const [searchDone, setSearchDone] = useState(!!data?.vehicle_number);
@@ -47,7 +63,11 @@ export default function Step1CommonData({ data, onSave, loading }) {
       );
       const json = await res.json();
       if (json.found) {
-        setForm((prev) => ({ ...prev, ...json.vehicle }));
+        setForm((prev) => ({
+          ...prev,
+          ...json.vehicle,
+          registration_date: normalizeDateForInput(json.vehicle?.registration_date),
+        }));
       } else {
         setNoVehicleFound(true);
       }
@@ -149,12 +169,18 @@ export default function Step1CommonData({ data, onSave, loading }) {
               error={errors.chassis_number}
               required
             />
+            <Field
+              label="Meter Reading"
+              value={form.meter_reading}
+              onChange={(v) => set("meter_reading", v)}
+              placeholder="Meter reading KM"
+              type="number"
+            />
             <div className="mb-4">
               <label className="form-label">
                 Registration Date <span className="text-red-500">*</span>
               </label>
-              <input
-                type="date"
+              <DateInput
                 value={form.registration_date}
                 onChange={(e) => set("registration_date", e.target.value)}
                 className="form-input"
@@ -254,7 +280,7 @@ export default function Step1CommonData({ data, onSave, loading }) {
               )}
             </div>
             <SearchableDropdown
-              label="Lane Type"
+              label="Vehicle Lane Type"
               options={LANE_TYPES}
               value={form.lane_type}
               onChange={(v) => set("lane_type", v)}
@@ -282,7 +308,7 @@ export default function Step1CommonData({ data, onSave, loading }) {
   );
 }
 
-function Field({ label, value, onChange, error, required, type = "text" }) {
+function Field({ label, value, onChange, error, required, type = "text", placeholder = "" }) {
   return (
     <div className="mb-4">
       <label className="form-label">
@@ -294,6 +320,7 @@ function Field({ label, value, onChange, error, required, type = "text" }) {
         value={value}
         onChange={(e) => onChange(e.target.value)}
         className="form-input"
+        placeholder={placeholder}
       />
       {error && <p className="text-red-500 text-xs mt-1">{error}</p>}
     </div>

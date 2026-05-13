@@ -13,6 +13,10 @@ async function handler(req, res) {
   }
 
   if (req.method === 'POST') {
+    if (req.user.role !== 'Admin') {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
+
     const { lane_type, doc_hidden_items, visual_hidden_items } = req.body;
     if (!lane_type) return res.status(400).json({ error: 'lane_type required' });
     try {

@@ -1,3 +1,5 @@
+import DateInput from './DateInput';
+
 export default function YesNoField({ label, value, onChange, dateValue, onDateChange, dateLabel, required }) {
   return (
     <div className="mb-4">
@@ -23,8 +25,7 @@ export default function YesNoField({ label, value, onChange, dateValue, onDateCh
       {onDateChange && (
         <div className="mt-2">
           <label className="form-label text-xs">{dateLabel || 'Expiry Date'}</label>
-          <input
-            type="date"
+          <DateInput
             value={dateValue || ''}
             onChange={(e) => onDateChange(e.target.value)}
             className="form-input text-sm"

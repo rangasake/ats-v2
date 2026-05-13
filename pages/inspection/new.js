@@ -12,6 +12,11 @@ import { ROLES } from '../../lib/constants';
 
 const STEPS = ['Common Data', 'Documents', 'Visual Test', 'Staff & Feedback'];
 
+function cleanVehicleData(data) {
+  const { created_at, updated_at, status, ...vehicleData } = data;
+  return vehicleData;
+}
+
 function NewInspection() {
   const router = useRouter();
   const [step, setStep] = useState(1);
@@ -76,8 +81,15 @@ function NewInspection() {
         vlt_device:        insp.vlt_device        || '',
       });
 
-      // 5. Restore step-3 visual data
-      setVisualData(insp.visual_data ? tryParse(insp.visual_data, {}) : {});
+      // 5. Restore step-3 visual data and already-uploaded image metadata
+      const restoredVisualData = insp.visual_data ? tryParse(insp.visual_data, {}) : {};
+      if (insp.image_urls_json) {
+        restoredVisualData.uploaded_images = insp.image_urls_json;
+      }
+      if (insp.lat_long) {
+        restoredVisualData.lat_long = insp.lat_long;
+      }
+      setVisualData(restoredVisualData);
 
       // 6. Rejected → always go to Step 1 so inspector reviews everything from scratch
       //    Draft → jump to next incomplete step
@@ -100,16 +112,17 @@ function NewInspection() {
     setLoading(true);
     setError('');
     try {
+      const vehiclePayload = cleanVehicleData(formData);
       const vRes = await fetch('/api/vehicle/save', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(vehiclePayload),
       });
       if (!vRes.ok) throw new Error('Failed to save vehicle');
 
       const cfgRes  = await fetch('/api/admin/lane-config');
       const cfgData = await cfgRes.json();
-      const cfg     = (cfgData.configs || []).find((c) => c.lane_type === formData.lane_type);
+      const cfg     = (cfgData.configs || []).find((c) => c.lane_type === vehiclePayload.lane_type);
       setLaneConfig({
         doc_hidden:    cfg ? tryParse(cfg.doc_hidden_items, [])    : [],
         visual_hidden: cfg ? tryParse(cfg.visual_hidden_items, []) : [],
@@ -118,13 +131,13 @@ function NewInspection() {
       const iRes  = await fetch('/api/inspection/save', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ step: 1, vehicle_number: formData.vehicle_number }),
+        body: JSON.stringify({ step: 1, vehicle_number: vehiclePayload.vehicle_number }),
       });
       const iData = await iRes.json();
       if (!iData.inspection_id) throw new Error('Failed to create inspection');
 
       setInspectionId(iData.inspection_id);
-      setVehicleData(formData);
+      setVehicleData(vehiclePayload);
       setStep(2);
     } catch (e) {
       setError(e.message);
@@ -158,7 +171,7 @@ function NewInspection() {
     setError('');
     try {
       // Separate image URLs from visual checklist data
-      const { uploaded_images, ...visualChecklist } = formData;
+      const { uploaded_images, lat_long, ...visualChecklist } = formData;
 
       // uploaded_images = JSON string of [{ directUrl, viewUrl, label, ... }]
       // Extract just the direct URLs as a clean comma-separated string for easy reading in Sheets
@@ -180,6 +193,7 @@ function NewInspection() {
           visual_data:    JSON.stringify(visualChecklist), // checklist only
           image_urls:     imageUrlsFlat,                  // comma-separated URLs — easy to read in Sheets
           image_urls_json: imageUrlsJson,                 // full JSON with labels, dimensions etc.
+          lat_long:        lat_long || '',
         }),
       });
       setVisualData(formData);

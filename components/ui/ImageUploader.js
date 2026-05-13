@@ -221,7 +221,7 @@ export default function ImageUploader({ inspectionId, vehicleNumber, onUploadCom
 
       if (!res.ok) throw new Error(data.error || 'Upload failed');
 
-      // Mark uploaded slots as done, attach Drive URLs
+      // Mark uploaded slots as done, attach hosted image URLs
       setSlots((prev) =>
         prev.map((s, i) => {
           const match = data.uploaded.find((u) => u.index === i + 1);
@@ -232,7 +232,7 @@ export default function ImageUploader({ inspectionId, vehicleNumber, onUploadCom
       if (data.errors && data.errors.length > 0) setErrors(data.errors);
       setUploadDone(true);
 
-      // Notify parent with Drive URLs
+      // Notify parent with hosted image URLs
       onUploadComplete && onUploadComplete(data.uploaded);
     } catch (err) {
       setErrors([err.message]);
@@ -336,7 +336,7 @@ export default function ImageUploader({ inspectionId, vehicleNumber, onUploadCom
         </div>
       )}
 
-      {/* Upload to Drive button */}
+      {/* Upload button */}
       {slots.length > 0 && !uploadDone && (
         <button
           type="button"
@@ -345,8 +345,8 @@ export default function ImageUploader({ inspectionId, vehicleNumber, onUploadCom
           className="w-full py-3 bg-indigo-600 text-white rounded-xl font-semibold text-sm active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
         >
           {uploading
-            ? <><span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Uploading to Drive...</>
-            : `☁️ Upload ${slots.length} Image${slots.length > 1 ? 's' : ''} to Drive`
+            ? <><span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Uploading images...</>
+            : `☁️ Upload ${slots.length} Image${slots.length > 1 ? 's' : ''}`
           }
         </button>
       )}
@@ -354,7 +354,7 @@ export default function ImageUploader({ inspectionId, vehicleNumber, onUploadCom
       {/* Done state */}
       {uploadDone && (
         <div className="bg-green-50 border border-green-200 rounded-xl px-4 py-3 text-sm text-green-700 font-semibold text-center">
-          ✅ {slots.filter(s => s.status === 'done').length} image{slots.filter(s => s.status === 'done').length > 1 ? 's' : ''} uploaded to Google Drive
+          ✅ {slots.filter(s => s.status === 'done').length} image{slots.filter(s => s.status === 'done').length > 1 ? 's' : ''} uploaded
           <button
             type="button"
             onClick={() => { setSlots([]); setUploadDone(false); setCompressionInfo([]); }}
