@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
+import { useRouter } from 'next/router';
 import AppLayout from '../components/layout/AppLayout';
 import StatusBadge from '../components/ui/StatusBadge';
 import { withAuth } from '../lib/useAuth';
@@ -9,9 +10,10 @@ import { INSPECTION_STATUS, ROLES } from '../lib/constants';
 
 function Dashboard() {
   const { user } = useAuth();
+  const router = useRouter();
   const [inspections, setInspections] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState('All');
+  const [loading, setLoading]         = useState(true);
+  const [filter, setFilter]           = useState('All');
 
   const statusFilters = ['All', ...Object.values(INSPECTION_STATUS)];
 
@@ -95,22 +97,40 @@ function Dashboard() {
         ) : (
           <div className="space-y-3">
             {filtered.map((insp) => (
-              <Link key={insp.inspection_id} href={`/inspection/${insp.inspection_id}`}>
-                <div className="card flex items-start justify-between gap-3 active:scale-98 transition-transform cursor-pointer">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1 flex-wrap">
-                      <span className="font-bold text-gray-800">{insp.vehicle_number || '—'}</span>
-                      <StatusBadge status={insp.status} />
+              <div key={insp.inspection_id} className="relative">
+                <Link href={`/inspection/${insp.inspection_id}`}>
+                  <div className="card flex items-start justify-between gap-3 active:scale-98 transition-transform cursor-pointer">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1 flex-wrap">
+                        <span className="font-bold text-gray-800">{insp.vehicle_number || '—'}</span>
+                        <StatusBadge status={insp.status} />
+                      </div>
+                      <div className="text-xs text-gray-500 space-y-0.5">
+                        {insp.lane_type  && <div>Lane: {insp.lane_type}</div>}
+                        {insp.test_date  && <div>Test Date: {insp.test_date}</div>}
+                        {insp.inspector_username && <div>By: {insp.inspector_username}</div>}
+                      </div>
                     </div>
-                    <div className="text-xs text-gray-500 space-y-0.5">
-                      {insp.lane_type && <div>Lane: {insp.lane_type}</div>}
-                      {insp.test_date && <div>Test Date: {insp.test_date}</div>}
-                      {insp.inspector_username && <div>By: {insp.inspector_username}</div>}
+                    <div className="flex items-center gap-2">
+                      {insp.status === INSPECTION_STATUS.APPROVED && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            router.push(`/inspection/${insp.inspection_id}?autoprint=1`);
+                          }}
+                          className="flex items-center gap-1 bg-green-50 border border-green-200 text-green-700 text-xs font-semibold px-3 py-1.5 rounded-xl active:scale-95 transition-all hover:bg-green-100"
+                          title="Print Certificate"
+                        >
+                          🖨️ Print
+                        </button>
+                      )}
+                      <div className="text-gray-400 text-lg">›</div>
                     </div>
                   </div>
-                  <div className="text-gray-400 text-lg mt-1">›</div>
-                </div>
-              </Link>
+                </Link>
+              </div>
             ))}
           </div>
         )}

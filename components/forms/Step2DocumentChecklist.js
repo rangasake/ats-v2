@@ -4,6 +4,50 @@ import YesNoField from '../ui/YesNoField';
 import SearchableDropdown from '../ui/SearchableDropdown';
 import DateInput from '../ui/DateInput';
 
+// Fields that carry an expiry date and need the next-expiry calculation
+const EXPIRY_FIELDS = ['last_rc', 'puc', 'insurance'];
+
+/**
+ * Calculates the next expiry date based on the rules:
+ *   base_date = (currentExpiry <= today) ? today : currentExpiry
+ *   years_to_add = (vehicleAge < 8 years) ? 2 : 1
+ *   next_expiry = base_date + years_to_add
+ */
+function computeNextExpiry(currentExpiryStr, registrationDateStr) {
+  if (!currentExpiryStr) return '';
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const currentExpiry = new Date(currentExpiryStr);
+  if (isNaN(currentExpiry.getTime())) return '';
+
+  const baseDate = currentExpiry <= today ? new Date(today) : new Date(currentExpiry);
+
+  const regDate = registrationDateStr ? new Date(registrationDateStr) : null;
+  const ageYears =
+    regDate && !isNaN(regDate.getTime())
+      ? (today - regDate) / (1000 * 60 * 60 * 24 * 365.25)
+      : 0;
+
+  const yearsToAdd = ageYears < 8 ? 2 : 1;
+  baseDate.setFullYear(baseDate.getFullYear() + yearsToAdd);
+
+  return baseDate.toISOString().split('T')[0];
+}
+
+/** Pre-compute all next-expiry fields from saved data at initialisation time */
+function withNextExpiries(formData, registrationDateStr) {
+  const extras = {};
+  EXPIRY_FIELDS.forEach((id) => {
+    const expiry = formData[`${id}_expiry`];
+    if (expiry) {
+      extras[`${id}_next_expiry`] = computeNextExpiry(expiry, registrationDateStr);
+    }
+  });
+  return { ...formData, ...extras };
+}
+
 function shouldShowItem(item, laneType, hiddenItems = []) {
   if (hiddenItems.includes(item.id)) return false;
   if (item.alwaysShow) return true;
@@ -12,23 +56,28 @@ function shouldShowItem(item, laneType, hiddenItems = []) {
   return true;
 }
 
-export default function Step2DocumentChecklist({ data, vehicleNumber, laneType, hiddenItems = [], onSave, onBack, loading }) {
-  const [form, setForm] = useState({
-    test_date: '',
-    test_type: '',
-    afms_free_receipt: '',
-    rc: '',
-    last_rc: '',
-    last_rc_expiry: '',
-    puc: '',
-    puc_expiry: '',
-    insurance: '',
-    insurance_expiry: '',
-    insurance_company: '',
-    speed_governor: '',
-    vlt_device: '',
-    ...data,
-  });
+export default function Step2DocumentChecklist({ data, vehicleNumber, laneType, registrationDate, hiddenItems = [], onSave, onBack, loading }) {
+  const [form, setForm] = useState(() =>
+    withNextExpiries(
+      {
+        test_date: '',
+        test_type: '',
+        afms_free_receipt: '',
+        rc: '',
+        last_rc: '',
+        last_rc_expiry: '',
+        puc: '',
+        puc_expiry: '',
+        insurance: '',
+        insurance_expiry: '',
+        insurance_company: '',
+        speed_governor: '',
+        vlt_device: '',
+        ...data,
+      },
+      registrationDate
+    )
+  );
 
   // Fetch insurance companies from Google Sheets (falls back to constants if empty/error)
   const [insuranceCompanies, setInsuranceCompanies] = useState(INSURANCE_COMPANIES);
@@ -52,10 +101,20 @@ export default function Step2DocumentChecklist({ data, vehicleNumber, laneType, 
     setForm((prev) => ({ ...prev, [field]: value }));
   }
 
+  /** When an expiry date changes, also recompute the next-expiry for that document */
+  function setExpiry(itemId, value) {
+    const nextExpiry = computeNextExpiry(value, registrationDate);
+    setForm((prev) => ({
+      ...prev,
+      [`${itemId}_expiry`]: value,
+      [`${itemId}_next_expiry`]: nextExpiry,
+    }));
+  }
+
   function handleSave() {
     onSave(form);
   }
-console.log('vehicleData', vehicleNumber)
+
   return (
     <div>
       <div className="card mb-4">
@@ -110,16 +169,26 @@ console.log('vehicleData', vehicleNumber)
             );
           }
           if (item.type === 'checkbox_date') {
+            const nextExpiry = form[`${item.id}_next_expiry`];
             return (
-              <YesNoField
-                key={item.id}
-                label={item.label}
-                value={form[item.id]}
-                onChange={(v) => set(item.id, v)}
-                dateValue={form[`${item.id}_expiry`]}
-                onDateChange={(v) => set(`${item.id}_expiry`, v)}
-                dateLabel={item.dateLabel}
-              />
+              <div key={item.id}>
+                <YesNoField
+                  label={item.label}
+                  value={form[item.id]}
+                  onChange={(v) => set(item.id, v)}
+                  dateValue={form[`${item.id}_expiry`]}
+                  onDateChange={(v) => setExpiry(item.id, v)}
+                  dateLabel={item.dateLabel}
+                />
+                {nextExpiry && (
+                  <div className="flex items-center gap-2 -mt-2 mb-4 ml-1">
+                    <span className="text-xs text-gray-500">Next Expiry:</span>
+                    <span className="text-xs font-semibold text-green-700 bg-green-50 border border-green-200 rounded-lg px-2 py-0.5">
+                      {new Date(nextExpiry).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+                    </span>
+                  </div>
+                )}
+              </div>
             );
           }
           return null;

@@ -15,7 +15,7 @@ function safeParseJSON(str, fallback = {}) {
 
 function InspectionDetail() {
   const router = useRouter();
-  const { id, submitted } = router.query;
+  const { id, submitted, autoprint } = router.query;
   const { user } = useAuth();
   const [inspection, setInspection] = useState(null);
   const [vehicle, setVehicle] = useState(null);
@@ -27,6 +27,18 @@ function InspectionDetail() {
   useEffect(() => {
     if (id) fetchData();
   }, [id]);
+
+  // Auto-trigger print when ?autoprint=1 is present and data is loaded
+  useEffect(() => {
+    if (autoprint && inspection && vehicle && printRef.current) {
+      const t = setTimeout(() => {
+        handlePrint();
+        // Clean up query param without reloading
+        router.replace(`/inspection/${id}`, undefined, { shallow: true });
+      }, 300);
+      return () => clearTimeout(t);
+    }
+  }, [autoprint, inspection, vehicle]);
 
   async function fetchData() {
     setLoading(true);
@@ -78,6 +90,19 @@ function InspectionDetail() {
           </div>
         )}
 
+        {/* Supervisor re-open notice — shown to inspector when inspection is reopened */}
+        {inspection.status === INSPECTION_STATUS.DRAFT && inspection.supervisor_remarks && (
+          <div className="bg-amber-50 border border-amber-400 rounded-2xl p-4 mb-4">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-lg">🔄</span>
+              <span className="font-bold text-amber-800">Re-opened by Supervisor</span>
+            </div>
+            <p className="text-sm text-amber-900 bg-amber-100 rounded-xl px-3 py-2">
+              💬 <strong>Note:</strong> {inspection.supervisor_remarks}
+            </p>
+          </div>
+        )}
+
         {/* Header Card */}
         <div className="card mb-4">
           <div className="flex items-start justify-between gap-3">
@@ -126,7 +151,7 @@ function InspectionDetail() {
         {/* Visual Checklist */}
         {Object.keys(visualData).length > 0 && (
           <Section title="🔍 Visual Test">
-            <InfoRow label="Device Location" value={inspection.lat_long} />
+            <InfoRow label="Vehicle Location" value={inspection.lat_long} />
             {VISUAL_CHECKLIST_ITEMS.map((item) => {
               const val = visualData[item.id];
               if (!val) return null;
@@ -146,7 +171,7 @@ function InspectionDetail() {
         )}
 
         {/* Supervisor Info */}
-        {inspection.booking_id && (
+        {(inspection.booking_id || inspection.supervisor_remarks) && inspection.status !== INSPECTION_STATUS.DRAFT && (
           <Section title="✅ Supervisor Review">
             <InfoRow label="Status" value={inspection.status} />
             <InfoRow label="Agent Phone" value={inspection.agent_phone} />

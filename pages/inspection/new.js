@@ -8,6 +8,7 @@ import Step2DocumentChecklist from '../../components/forms/Step2DocumentChecklis
 import Step3VisualChecklist from '../../components/forms/Step3VisualChecklist';
 import Step4StaffFeedback from '../../components/forms/Step4StaffFeedback';
 import { withAuth } from '../../lib/useAuth';
+import { useAuth } from '../../lib/useAuth';
 import { ROLES } from '../../lib/constants';
 
 const STEPS = ['Common Data', 'Documents', 'Visual Test', 'Staff & Feedback'];
@@ -24,6 +25,9 @@ function NewInspection() {
   const [loading, setLoading] = useState(false);
   const [resumeLoading, setResumeLoading] = useState(false);
   const [error, setError] = useState('');
+  const [conflictDraft, setConflictDraft] = useState(null); // { inspection_id, inspector_username, step, updated_at }
+  const [takingOver, setTakingOver] = useState(false);
+  const { user } = useAuth();
 
   const [vehicleData, setVehicleData] = useState({});
   const [docData, setDocData] = useState({});
@@ -127,6 +131,29 @@ function NewInspection() {
         doc_hidden:    cfg ? tryParse(cfg.doc_hidden_items, [])    : [],
         visual_hidden: cfg ? tryParse(cfg.visual_hidden_items, []) : [],
       });
+
+      // ── Check if another draft exists for this vehicle ────────────────────
+      const draftRes  = await fetch(`/api/inspection/check-draft?vehicle_number=${encodeURIComponent(vehiclePayload.vehicle_number)}`);
+      const draftData = await draftRes.json();
+
+      if (draftData.draft) {
+        const draft = draftData.draft;
+        if (draft.inspector_username === user?.username) {
+          // Same user — just resume their own draft
+          router.push(`/inspection/new?resume=${draft.inspection_id}`);
+          return;
+        } else {
+          // Different user — show conflict popup, hold vehicle data for later
+          setVehicleData(vehiclePayload);
+          setLaneConfig({
+            doc_hidden:    cfg ? tryParse(cfg.doc_hidden_items, [])    : [],
+            visual_hidden: cfg ? tryParse(cfg.visual_hidden_items, []) : [],
+          });
+          setConflictDraft(draft);
+          setLoading(false);
+          return;
+        }
+      }
 
       const iRes  = await fetch('/api/inspection/save', {
         method: 'POST',
@@ -242,6 +269,61 @@ function NewInspection() {
       <Head><title>{router.query.resume ? 'Resume Inspection' : 'New Inspection'} - AFTS</title></Head>
       <AppLayout title={router.query.resume ? `Resume: ${router.query.resume}` : 'New Inspection'}>
 
+        {/* ── Draft conflict popup ─────────────────────────────────────────── */}
+        {conflictDraft && (
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: '1rem' }}>
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
+              <div className="text-3xl text-center mb-3">⚠️</div>
+              <h2 className="text-lg font-extrabold text-gray-800 text-center mb-2">Draft Already Exists</h2>
+              <p className="text-sm text-gray-600 text-center mb-1 whitespace-nowrap">
+                This vehicle inspection was started by
+              </p>
+              <p className="text-base font-extrabold text-blue-700 text-center mb-1 whitespace-nowrap">
+                {conflictDraft.inspector_username}
+              </p>
+              <p className="text-xs text-gray-400 text-center mb-4 whitespace-nowrap">
+                Step {conflictDraft.step} of 4 · Last saved {conflictDraft.updated_at ? new Date(conflictDraft.updated_at).toLocaleString() : '—'}
+              </p>
+              <p className="text-sm text-gray-600 text-center mb-5 whitespace-nowrap">
+                Do you still want to continue?
+              </p>
+              <div className="flex flex-col gap-3">
+                <button
+                  disabled={takingOver}
+                  onClick={async () => {
+                    setTakingOver(true);
+                    try {
+                      const res  = await fetch('/api/inspection/takeover', {
+                        method:  'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body:    JSON.stringify({ inspection_id: conflictDraft.inspection_id }),
+                      });
+                      const data = await res.json();
+                      if (!res.ok) throw new Error(data.error || 'Takeover failed');
+                      setConflictDraft(null);
+                      router.push(`/inspection/new?resume=${conflictDraft.inspection_id}`);
+                    } catch (e) {
+                      setError(e.message);
+                      setConflictDraft(null);
+                    } finally {
+                      setTakingOver(false);
+                    }
+                  }}
+                  className="btn-primary"
+                >
+                  {takingOver ? 'Please wait...' : '✅ Yes, Continue from where they left off'}
+                </button>
+                <button
+                  onClick={() => router.push('/dashboard')}
+                  className="btn-secondary"
+                >
+                  ← No, Back to Dashboard
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Resume / resubmit banner */}
         {router.query.resume && !resumeLoading && (
           <div className={`rounded-xl px-4 py-3 mb-4 flex items-center gap-2 text-sm
@@ -276,6 +358,7 @@ function NewInspection() {
             laneType={vehicleData.lane_type}
             vehicleNumber={vehicleData.vehicle_number}
             vehicleLane={vehicleData.vehicle_lane}
+            registrationDate={vehicleData.registration_date}
             hiddenItems={laneConfig.doc_hidden}
             onSave={handleStep2}
             onBack={() => setStep(1)}

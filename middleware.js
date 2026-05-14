@@ -9,6 +9,8 @@ const PUBLIC_PATHS = [
   '/api/auth/logout',       // logout
   '/api/auth/me',           // session check
   '/api/devices/verify',    // verify endpoint itself
+  '/api/devices/register',  // server-side device registration (sets HttpOnly cookie)
+  '/api/devices/clear',     // server-side cookie clear
   '/_next',
   '/favicon.ico',
 ];

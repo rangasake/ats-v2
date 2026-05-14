@@ -1,22 +1,11 @@
 // pages/device-register.js
-// Token saved in BOTH cookie (for middleware SSR checks) and localStorage (backup)
+// Registers a device by calling the server-side register endpoint,
+// which validates the token and sets an HttpOnly cookie.
 import { useState, useEffect } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 
-const TOKEN_KEY    = 'afts_device_token';
-const COOKIE_NAME  = 'afts_device_token';
-// Cookie max age: 1 year (in seconds)
-const COOKIE_MAX_AGE = 60 * 60 * 24 * 365;
-
-function setTokenCookie(token) {
-  // SameSite=Lax works for same-origin; no Secure flag needed for http localhost
-  document.cookie = `${COOKIE_NAME}=${encodeURIComponent(token)}; path=/; max-age=${COOKIE_MAX_AGE}; SameSite=Lax`;
-}
-
-function clearTokenCookie() {
-  document.cookie = `${COOKIE_NAME}=; path=/; max-age=0; SameSite=Lax`;
-}
+const TOKEN_KEY = 'afts_device_token';
 
 export default function DeviceRegister() {
   const router  = useRouter();
@@ -26,6 +15,8 @@ export default function DeviceRegister() {
   const [existing, setExisting] = useState('');
 
   useEffect(() => {
+    // Show a hint if a token was previously registered (token key kept in localStorage
+    // only as a UI hint; the actual security token lives in the HttpOnly cookie).
     const saved = localStorage.getItem(TOKEN_KEY) || '';
     if (saved) setExisting(saved.slice(0, 10) + '••••••••••••••');
   }, []);
@@ -39,7 +30,8 @@ export default function DeviceRegister() {
     setMessage('');
 
     try {
-      const res  = await fetch('/api/devices/verify', {
+      // Call the server-side register endpoint — it sets an HttpOnly cookie on success
+      const res  = await fetch('/api/devices/register', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify({ token: trimmed }),
@@ -47,8 +39,7 @@ export default function DeviceRegister() {
       const data = await res.json();
 
       if (data.valid) {
-        // Save to BOTH cookie and localStorage
-        setTokenCookie(trimmed);
+        // Store a non-sensitive hint in localStorage only for UI display purposes
         localStorage.setItem(TOKEN_KEY, trimmed);
 
         setStatus('success');
@@ -65,7 +56,8 @@ export default function DeviceRegister() {
   }
 
   function handleClear() {
-    clearTokenCookie();
+    // Ask the server to clear the HttpOnly cookie, then remove the localStorage hint
+    fetch('/api/devices/clear', { method: 'POST' }).catch(() => {});
     localStorage.removeItem(TOKEN_KEY);
     setExisting('');
     setToken('');
@@ -139,7 +131,7 @@ export default function DeviceRegister() {
         </div>
 
         <p className="mt-6 text-blue-200 text-xs text-center max-w-xs">
-          Token is stored as a secure cookie on this device only.
+          Token is stored as a secure HttpOnly cookie on this device only.
         </p>
       </div>
     </>

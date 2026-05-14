@@ -34,7 +34,7 @@ export default function Step4StaffFeedback({ data, onSubmit, onBack, loading }) 
           <label className="form-label">Lane Inspector <span className="text-red-500">*</span></label>
           <select value={form.lane_inspector} onChange={(e) => set('lane_inspector', e.target.value)} className="form-input">
             <option value="">Select Inspector</option>
-            {staff.map((s) => (
+            {inspectors.map((s) => (
               <option key={s.name} value={s.name}>{s.name}</option>
             ))}
           </select>
@@ -43,7 +43,7 @@ export default function Step4StaffFeedback({ data, onSubmit, onBack, loading }) 
           <label className="form-label">Lane Incharge <span className="text-red-500">*</span></label>
           <select value={form.lane_incharge} onChange={(e) => set('lane_incharge', e.target.value)} className="form-input">
             <option value="">Select Incharge</option>
-            {staff.map((s) => (
+            {incharges.map((s) => (
               <option key={s.name} value={s.name}>{s.name}</option>
             ))}
           </select>

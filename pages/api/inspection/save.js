@@ -12,8 +12,8 @@ async function handler(req, res) {
   try {
     await ensureHeaders(SHEETS.INSPECTIONS, ['lat_long']);
 
-    if (String(step) === '3' && !stepData.lat_long?.trim()) {
-      return res.status(400).json({ error: 'Device location is required' });
+    if (String(step) === '3' && !stepData.lat_long?.trim() && stepData.lat_long !== undefined) {
+      return res.status(400).json({ error: 'Vehicle location is required' });
     }
 
     if (inspection_id) {
@@ -24,7 +24,12 @@ async function handler(req, res) {
         return res.status(403).json({ error: 'Not authorized' });
       }
 
-      const updates = { ...stepData, step: String(step), updated_at: now };
+      // step is optional — omit it to update fields without changing the step counter
+      const updates = {
+        ...stepData,
+        ...(step !== undefined ? { step: String(step) } : {}),
+        updated_at: now,
+      };
       const ok = await updateRow(SHEETS.INSPECTIONS, 'inspection_id', inspection_id, updates);
       if (!ok) return res.status(404).json({ error: 'Inspection not found' });
       return res.status(200).json({ success: true, inspection_id });

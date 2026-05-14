@@ -136,7 +136,7 @@ function SupervisorReview() {
         {Object.keys(visualData).length > 0 && (
           <div className="card mb-4">
             <h2 className="section-title">🔍 Visual Test</h2>
-            <Row label="Device Location" value={inspection.lat_long} />
+            <Row label="Vehicle Location" value={inspection.lat_long} />
             {VISUAL_CHECKLIST_ITEMS.map((item) => {
               const val = visualData[item.id];
               if (!val) return null;
@@ -164,7 +164,7 @@ function SupervisorReview() {
           <h2 className="section-title">🔐 Supervisor Details</h2>
 
           <div className="mb-4">
-            <label className="form-label">Agent Phone Number</label>
+            <label className="form-label">Booking Phone Number</label>
             <div className="flex gap-2">
               <input
                 type="tel"
@@ -177,17 +177,6 @@ function SupervisorReview() {
               />
               {agentLookingUp && <div className="py-3 px-3 text-gray-400 text-sm">...</div>}
             </div>
-          </div>
-
-          <div className="mb-4">
-            <label className="form-label">Agent Name</label>
-            <input
-              type="text"
-              value={agentName}
-              onChange={(e) => setAgentName(e.target.value)}
-              className="form-input"
-              placeholder="Auto-filled or enter name"
-            />
           </div>
 
           <div className="mb-4">

@@ -12,6 +12,9 @@ function AdminUsers() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [resetTarget, setResetTarget] = useState(null); // username
+  const [resetPw, setResetPw] = useState('');
+  const [resetSaving, setResetSaving] = useState(false);
 
   useEffect(() => { fetchUsers(); }, []);
 
@@ -92,6 +95,30 @@ function AdminUsers() {
     }
   }
 
+  async function handleResetPassword(e) {
+    e.preventDefault();
+    if (!resetPw.trim()) return;
+    setResetSaving(true);
+    setError('');
+    setSuccess('');
+    try {
+      const res = await fetch('/api/admin/users', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: resetTarget, password: resetPw.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to reset password');
+      setSuccess(`Password reset for ${resetTarget}`);
+      setResetTarget(null);
+      setResetPw('');
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setResetSaving(false);
+    }
+  }
+
   return (
     <>
       <Head><title>User Management - AFTS</title></Head>
@@ -151,42 +178,79 @@ function AdminUsers() {
         ) : (
           <div className="space-y-3">
             {users.map((u) => (
-              <div key={u.username} className="card flex items-center justify-between gap-3">
-                <div>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <div className="font-bold text-gray-800">{u.name || u.username}</div>
-                    <span className={`text-xs font-bold px-2 py-0.5 rounded-full
-                      ${isActive(u) ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}
-                    >
-                      {isActive(u) ? 'Active' : 'Inactive'}
-                    </span>
+              <div key={u.username} className="card">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <div className="font-bold text-gray-800">{u.name || u.username}</div>
+                      <span className={`text-xs font-bold px-2 py-0.5 rounded-full
+                        ${isActive(u) ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}
+                      >
+                        {isActive(u) ? 'Active' : 'Inactive'}
+                      </span>
+                    </div>
+                    <div className="text-xs text-gray-500 mt-0.5">@{u.username} · {u.role}</div>
                   </div>
-                  <div className="text-xs text-gray-500 mt-0.5">@{u.username} · {u.role}</div>
-                </div>
-                <div className="flex gap-2 flex-wrap justify-end">
-                  {!isActive(u) && (
+                  <div className="flex gap-2 flex-wrap justify-end">
                     <button
-                      onClick={() => updateUserStatus(u, true)}
-                      className="px-3 py-1.5 rounded-xl text-xs font-bold transition-colors bg-green-50 text-green-700 border border-green-200"
+                      onClick={() => { setResetTarget(resetTarget === u.username ? null : u.username); setResetPw(''); }}
+                      className="px-3 py-1.5 rounded-xl text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200"
                     >
-                      Active
+                      🔑 Reset PW
                     </button>
-                  )}
-                  {isActive(u) && (
+                    {!isActive(u) && (
+                      <button
+                        onClick={() => updateUserStatus(u, true)}
+                        className="px-3 py-1.5 rounded-xl text-xs font-bold transition-colors bg-green-50 text-green-700 border border-green-200"
+                      >
+                        Active
+                      </button>
+                    )}
+                    {isActive(u) && (
+                      <button
+                        onClick={() => updateUserStatus(u, false)}
+                        className="px-3 py-1.5 rounded-xl text-xs font-bold transition-colors bg-gray-100 text-gray-600 border border-gray-200"
+                      >
+                        Inactive
+                      </button>
+                    )}
                     <button
-                      onClick={() => updateUserStatus(u, false)}
-                      className="px-3 py-1.5 rounded-xl text-xs font-bold transition-colors bg-gray-100 text-gray-600 border border-gray-200"
+                      onClick={() => deleteUser(u)}
+                      className="px-3 py-1.5 rounded-xl text-xs font-bold bg-red-50 text-red-600 border border-red-200"
                     >
-                      Inactive
+                      Delete
                     </button>
-                  )}
-                  <button
-                    onClick={() => deleteUser(u)}
-                    className="px-3 py-1.5 rounded-xl text-xs font-bold bg-red-50 text-red-600 border border-red-200"
-                  >
-                    Delete
-                  </button>
+                  </div>
                 </div>
+
+                {/* Inline reset password panel */}
+                {resetTarget === u.username && (
+                  <form onSubmit={handleResetPassword} className="mt-3 pt-3 border-t border-gray-100 flex gap-2">
+                    <input
+                      type="text"
+                      placeholder="New password"
+                      value={resetPw}
+                      onChange={(e) => setResetPw(e.target.value)}
+                      className="form-input flex-1 text-sm"
+                      autoComplete="new-password"
+                      required
+                    />
+                    <button
+                      type="submit"
+                      disabled={resetSaving || !resetPw.trim()}
+                      className="px-4 py-2 rounded-xl text-xs font-bold bg-blue-600 text-white disabled:opacity-50"
+                    >
+                      {resetSaving ? '...' : 'Save'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setResetTarget(null); setResetPw(''); }}
+                      className="px-3 py-2 rounded-xl text-xs font-bold bg-gray-100 text-gray-600"
+                    >
+                      Cancel
+                    </button>
+                  </form>
+                )}
               </div>
             ))}
           </div>

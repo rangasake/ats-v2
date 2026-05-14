@@ -1,6 +1,7 @@
 import { requireAuth } from '../../../lib/auth';
 import { ensureHeaders, getRows, appendRow, updateRow } from '../../../lib/googleSheets';
 import { SHEETS } from '../../../lib/constants';
+import bcrypt from 'bcryptjs';
 
 function isDeleted(row) {
   return String(row.active || 'true').trim().toLowerCase() === 'deleted';
@@ -36,7 +37,8 @@ async function handler(req, res) {
       if (visibleUsers.length >= 10) {
         return res.status(400).json({ error: 'Maximum 10 users allowed' });
       }
-      await appendRow(SHEETS.USERS, { username, password, role, name: name || username, active: active ?? 'true' });
+      const hashedPassword = await bcrypt.hash(password, 12);
+      await appendRow(SHEETS.USERS, { username, password: hashedPassword, role, name: name || username, active: active ?? 'true' });
       return res.status(200).json({ success: true });
     } catch (err) {
       return res.status(500).json({ error: 'Server error' });
@@ -55,6 +57,10 @@ async function handler(req, res) {
     }
     try {
       await ensureHeaders(SHEETS.USERS, ['username', 'password', 'role', 'name', 'active']);
+      // Hash the new password if one is being set
+      if (updates.password) {
+        updates.password = await bcrypt.hash(updates.password, 12);
+      }
       const ok = await updateRow(SHEETS.USERS, 'username', username, updates);
       if (!ok) return res.status(404).json({ error: 'User not found' });
       return res.status(200).json({ success: true });

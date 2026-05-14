@@ -1,6 +1,7 @@
 import { findRow } from '../../../lib/googleSheets';
 import { signToken, setAuthCookie } from '../../../lib/auth';
 import { SHEETS } from '../../../lib/constants';
+import bcrypt from 'bcryptjs';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end();
@@ -16,8 +17,9 @@ export default async function handler(req, res) {
     if (!user || user.active?.toLowerCase() !== 'true') {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
-    // Plain text password comparison (stored in Google Sheets)
-    if (user.password !== password) {
+    // Compare against bcrypt hash stored in Google Sheets
+    const passwordMatch = await bcrypt.compare(password, user.password);
+    if (!passwordMatch) {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 

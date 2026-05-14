@@ -5,6 +5,23 @@ function safeParseJSON(str, fallback = {}) {
   try { return JSON.parse(str); } catch { return fallback; }
 }
 
+/** Formats the display certificate ID as ATSK-DDMMYYYY-LAST4OFVEHICLE */
+function formatCertId(testDate, vehicleNumber) {
+  let dateStr = '';
+  if (testDate) {
+    const d = new Date(testDate);
+    if (!isNaN(d.getTime())) {
+      dateStr = `${String(d.getDate()).padStart(2,'0')}${String(d.getMonth()+1).padStart(2,'0')}${d.getFullYear()}`;
+    }
+  }
+  if (!dateStr) {
+    const d = new Date();
+    dateStr = `${String(d.getDate()).padStart(2,'0')}${String(d.getMonth()+1).padStart(2,'0')}${d.getFullYear()}`;
+  }
+  const last4 = vehicleNumber ? vehicleNumber.trim().toUpperCase().slice(-4) : 'XXXX';
+  return `ATSK-${dateStr}-${last4}`;
+}
+
 // Telugu disclaimer points
 const DISCLAIMER_TELUGU = [
   'ఈ ఫిట్‌నెస్ సర్టిఫికేట్ పై పేర్కొన్న తేదీన పరీక్షించిన వాహనానికి మాత్రమే వర్తిస్తుంది.',
@@ -32,71 +49,89 @@ const S = {
   header: {
     display: 'flex',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    borderBottom: '3px solid #1e3a8a',
+    justifyContent: 'center',
+    borderBottom: '3px solid #0e7490',
     paddingBottom: '7px',
     marginBottom: '8px',
+    background: 'linear-gradient(135deg,#f0f9ff,#ecfdf5)',
+    borderRadius: '6px',
+    padding: '8px 10px 7px',
   },
   logoBox: {
-    width: '52px',
-    height: '52px',
-    background: 'linear-gradient(135deg,#1e3a8a,#2563eb)',
-    borderRadius: '8px',
+    width: '56px',
+    height: '56px',
+    background: 'linear-gradient(135deg,#0e7490,#059669)',
+    borderRadius: '10px',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    fontSize: '24px',
+    fontSize: '26px',
     flexShrink: 0,
+    boxShadow: '0 2px 6px rgba(14,116,144,0.3)',
   },
   companyBlock: {
-    textAlign: 'right',
+    textAlign: 'center',
     flex: 1,
-    paddingLeft: '10px',
   },
   companyName: {
-    fontSize: '13px',
+    fontSize: '14px',
     fontWeight: '900',
-    color: '#1e3a8a',
-    letterSpacing: '0.5px',
+    color: '#0e7490',
+    letterSpacing: '0.8px',
     lineHeight: '1.2',
     textTransform: 'uppercase',
   },
+  companySubName: {
+    fontSize: '10px',
+    fontWeight: '700',
+    color: '#059669',
+    letterSpacing: '0.4px',
+    marginTop: '1px',
+  },
   companyAddr: {
-    fontSize: '8.5px',
+    fontSize: '8px',
     color: '#4b5563',
-    marginTop: '2px',
+    marginTop: '3px',
     lineHeight: '1.5',
   },
   certBadge: {
-    background: '#1e3a8a',
+    background: 'linear-gradient(90deg,#0e7490,#059669)',
     color: '#fff',
     fontSize: '8px',
     fontWeight: '700',
-    padding: '2px 8px',
+    padding: '2px 10px',
     borderRadius: '3px',
-    marginTop: '3px',
+    marginTop: '4px',
     display: 'inline-block',
-    letterSpacing: '0.5px',
+    letterSpacing: '0.8px',
   },
 
   // ── Certificate ID bar ───────────────────────────────────────
   idBar: {
-    background: '#f0f4ff',
-    border: '1px solid #c7d2fe',
-    borderRadius: '4px',
-    padding: '4px 8px',
+    background: 'linear-gradient(90deg,#e0f2fe,#d1fae5)',
+    border: '1px solid #7dd3fc',
+    borderRadius: '5px',
+    padding: '5px 10px',
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: '8px',
     fontSize: '8.5px',
+    flexWrap: 'wrap',
+    gap: '4px',
   },
   idItem: { color: '#374151' },
-  idVal:  { fontWeight: '700', color: '#1e3a8a', marginLeft: '4px' },
+  idVal:  { fontWeight: '800', color: '#0e7490', marginLeft: '4px' },
+  idBox: {
+    display: 'inline-block',
+    minWidth: '60px',
+    borderBottom: '1.5px solid #0e7490',
+    marginLeft: '4px',
+  },
 
   // ── Section header ───────────────────────────────────────────
   secHeader: {
-    background: 'linear-gradient(90deg,#1e3a8a,#2563eb)',
+    background: 'linear-gradient(90deg,#0e7490,#0284c7)',
     color: '#fff',
     fontSize: '8.5px',
     fontWeight: '700',
@@ -324,15 +359,12 @@ const PrintLayout = forwardRef(function PrintLayout({ inspection, vehicle }, ref
 
       {/* ── HEADER ─────────────────────────────────────────────── */}
       <div style={S.header}>
-        {/* Logo */}
-        <div style={S.logoBox}>🚗</div>
-
-        {/* Company Info — right */}
+        {/* Company Info — centered */}
         <div style={S.companyBlock}>
-          <div style={S.companyName}>Automated Vehicle Fitness Testing Station</div>
+          <div style={S.companyName}>E S R INFRA SOLUTIONS</div>
+          <div style={S.companySubName}>(ATS Konaseema)</div>
           <div style={S.companyAddr}>
-            NH-16, Near RTO Office, Amalapuram, East Godavari District, Andhra Pradesh — 533 201<br />
-            📞 +91-XXXXX-XXXXX &nbsp;|&nbsp; ✉ info@afts.ap.gov.in &nbsp;|&nbsp; Reg. No: AP/AFTS/2024/001
+            ATS Centre, SH 14, A Vemavaram, Dr B R Ambedkar Konaseema — 533577
           </div>
           <span style={S.certBadge}>VEHICLE FITNESS INSPECTION CERTIFICATE</span>
         </div>
@@ -340,48 +372,61 @@ const PrintLayout = forwardRef(function PrintLayout({ inspection, vehicle }, ref
 
       {/* ── ID BAR ─────────────────────────────────────────────── */}
       <div style={S.idBar}>
-        <span style={S.idItem}>Inspection ID: <strong style={S.idVal}>{inspection.inspection_id}</strong></span>
-        {inspection.booking_id && <span style={S.idItem}>Booking ID: <strong style={S.idVal}>{inspection.booking_id}</strong></span>}
+        <span style={S.idItem}>Cert ID: <strong style={S.idVal}>{formatCertId(inspection.test_date, vehicle.vehicle_number)}</strong></span>
+        <span style={S.idItem}>Booking ID:
+          {inspection.booking_id
+            ? <strong style={S.idVal}>{inspection.booking_id}</strong>
+            : <span style={S.idBox}>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>}
+        </span>
         <span style={S.idItem}>Date: <strong style={S.idVal}>{inspection.test_date || new Date().toLocaleDateString('en-IN')}</strong></span>
         <span style={S.idItem}>Type: <strong style={S.idVal}>{inspection.test_type || '—'}</strong></span>
-        <span style={S.idItem}>Status: <strong style={{ ...S.idVal, color: '#16a34a' }}>{inspection.status}</strong></span>
+        {inspection.agent_phone && <span style={S.idItem}>Booking Ph: <strong style={S.idVal}>{inspection.agent_phone}</strong></span>}
+        <span style={S.idItem}>Status: <strong style={{ ...S.idVal, color: '#059669' }}>{inspection.status}</strong></span>
       </div>
 
       {/* ── ROW 1: COMMON DATA ─────────────────────────────────── */}
       <div style={S.secHeader}>① Vehicle &amp; Owner Information</div>
-      <table style={S.table}>
+      <table style={{ ...S.table, tableLayout: 'fixed' }}>
+        <colgroup>
+          <col style={{ width: '18%' }} />
+          <col style={{ width: '32%' }} />
+          <col style={{ width: '18%' }} />
+          <col style={{ width: '32%' }} />
+        </colgroup>
         <tbody>
           <tr>
-            <td style={S.tdLabel}>Vehicle Number</td>
-            <td style={{ ...S.tdValue, fontWeight: '800', fontSize: '10px', color: '#1e3a8a' }}>{vehicle.vehicle_number}</td>
-            <td style={S.tdLabel}>Engine Number</td>
-            <td style={S.tdValue}>{vehicle.engine_number}</td>
-            <td style={S.tdLabel}>Chassis Number</td>
-            <td style={S.tdValue}>{vehicle.chassis_number}</td>
+            <td style={{ ...S.tdLabel, width: '18%' }}>Vehicle Number</td>
+            <td style={{ ...S.tdValue, width: '32%', fontWeight: '800', fontSize: '10px', color: '#0e7490' }}>{vehicle.vehicle_number}</td>
+            <td style={{ ...S.tdLabel, width: '18%' }}>Engine Number</td>
+            <td style={{ ...S.tdValue, width: '32%', overflowWrap: 'break-word' }}>{vehicle.engine_number}</td>
           </tr>
           <tr>
-            <td style={S.tdLabel}>Owner Name</td>
-            <td style={S.tdValue}>{vehicle.owner_name}</td>
-            <td style={S.tdLabel}>Owner Phone</td>
-            <td style={S.tdValue}>{vehicle.owner_phone}</td>
-            <td style={S.tdLabel}>Reg. Date</td>
-            <td style={S.tdValue}>{vehicle.registration_date}</td>
+            <td style={{ ...S.tdLabel, width: '18%' }}>Chassis Number</td>
+            <td style={{ ...S.tdValue, width: '32%', overflowWrap: 'break-word' }}>{vehicle.chassis_number}</td>
+            <td style={{ ...S.tdLabel, width: '18%' }}>Owner Name</td>
+            <td style={{ ...S.tdValue, width: '32%' }}>{vehicle.owner_name}</td>
           </tr>
           <tr>
-            <td style={S.tdLabel}>Meter Reading</td>
-            <td style={S.tdValue}>{vehicle.meter_reading ? `${vehicle.meter_reading} KM` : '—'}</td>
-            <td style={S.tdLabel}>Device Location</td>
-            <td style={S.tdValue}>{inspection.lat_long || '—'}</td>
-            <td style={S.tdLabel}></td>
-            <td style={S.tdValue}></td>
+            <td style={{ ...S.tdLabel, width: '18%' }}>Owner Phone</td>
+            <td style={{ ...S.tdValue, width: '32%' }}>{vehicle.owner_phone}</td>
+            <td style={{ ...S.tdLabel, width: '18%' }}>Reg. Date</td>
+            <td style={{ ...S.tdValue, width: '32%' }}>{vehicle.registration_date}</td>
           </tr>
           <tr>
-            <td style={S.tdLabel}>Mandal</td>
-            <td style={S.tdValue}>{vehicle.mandal_name}</td>
-            <td style={S.tdLabel}>RTO Office</td>
-            <td style={S.tdValue}>{vehicle.rto_office}</td>
-            <td style={S.tdLabel}>Vehicle Lane / Type</td>
-            <td style={S.tdValue}>{vehicle.vehicle_lane} / {vehicle.lane_type}</td>
+            <td style={{ ...S.tdLabel, width: '18%' }}>Meter Reading</td>
+            <td style={{ ...S.tdValue, width: '32%' }}>{vehicle.meter_reading ? `${vehicle.meter_reading} KM` : '—'}</td>
+            <td style={{ ...S.tdLabel, width: '18%' }}>Mandal</td>
+            <td style={{ ...S.tdValue, width: '32%' }}>{vehicle.mandal_name}</td>
+          </tr>
+          <tr>
+            <td style={{ ...S.tdLabel, width: '18%' }}>RTO Office</td>
+            <td style={{ ...S.tdValue, width: '32%' }}>{vehicle.rto_office}</td>
+            <td style={{ ...S.tdLabel, width: '18%' }}>Lane / Type</td>
+            <td style={{ ...S.tdValue, width: '32%' }}>{vehicle.vehicle_lane} / {vehicle.lane_type}</td>
+          </tr>
+          <tr>
+            <td style={{ ...S.tdLabel, width: '18%' }}>Vehicle Location</td>
+            <td style={{ ...S.tdValue, width: '82%', overflowWrap: 'break-word' }} colSpan={3}>{inspection.lat_long || '—'}</td>
           </tr>
         </tbody>
       </table>
@@ -455,12 +500,7 @@ const PrintLayout = forwardRef(function PrintLayout({ inspection, vehicle }, ref
             {opt}
           </span>
         ))}
-        {inspection.agent_name && (
-          <span style={{ marginLeft: 'auto', fontSize: '8px', color: '#374151' }}>
-            Agent: <strong>{inspection.agent_name}</strong>
-            {inspection.agent_phone && ` (${inspection.agent_phone})`}
-          </span>
-        )}
+
       </div>
 
       {/* ── TEAR LINE ────────────────────────────────────────────── */}
@@ -503,7 +543,7 @@ const PrintLayout = forwardRef(function PrintLayout({ inspection, vehicle }, ref
       {/* ── FOOTER ──────────────────────────────────────────────── */}
       <div style={S.footer}>
         Generated: {new Date().toLocaleString('en-IN')} &nbsp;|&nbsp;
-        AFTS — Automated Vehicle Fitness Testing Station, Amalapuram &nbsp;|&nbsp;
+        E S R INFRA SOLUTIONS (ATS Konaseema), A Vemavaram &nbsp;|&nbsp;
         This is a computer-generated certificate.
       </div>
 

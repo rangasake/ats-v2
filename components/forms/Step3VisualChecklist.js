@@ -45,10 +45,29 @@ export default function Step3VisualChecklist({ data, laneType, hiddenItems = [],
     setForm((prev) => ({ ...prev, [field]: value }));
   }
 
-  // Called by ImageUploader after successful image upload
-  function handleUploadComplete(uploaded) {
+  // Called by ImageUploader after successful image upload.
+  // Also auto-saves URLs to the inspection sheet immediately so they survive a refresh.
+  async function handleUploadComplete(uploaded) {
     setUploadedImages(uploaded);
     setImageError('');
+
+    if (!inspectionId) return;
+    try {
+      const imageUrlsFlat = uploaded.map((img) => img.directUrl).filter(Boolean).join(', ');
+      await fetch('/api/inspection/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        // No 'step' field — keeps the sheet step counter unchanged so resume
+        // correctly lands back on step 3 instead of skipping to step 4.
+        body: JSON.stringify({
+          inspection_id:   inspectionId,
+          image_urls:      imageUrlsFlat,
+          image_urls_json: JSON.stringify(uploaded),
+        }),
+      });
+    } catch {
+      // Non-fatal: images are safe on Cloudinary; user can still proceed normally.
+    }
   }
 
   function handlePinLocation() {
@@ -82,7 +101,7 @@ export default function Step3VisualChecklist({ data, laneType, hiddenItems = [],
       return;
     }
     if (!latLong) {
-      setLocationError('Please pin the device location before continuing.');
+      setLocationError('Please pin the vehicle location before continuing.');
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
@@ -116,7 +135,7 @@ export default function Step3VisualChecklist({ data, laneType, hiddenItems = [],
 
         <div className="mb-4">
           <label className="form-label">
-            Device Location <span className="text-red-500">*</span>
+            Vehicle Location <span className="text-red-500">*</span>
           </label>
           <button
             type="button"

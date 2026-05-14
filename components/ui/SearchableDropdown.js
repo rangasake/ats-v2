@@ -33,10 +33,10 @@ export default function SearchableDropdown({ label, options, value, onChange, pl
         <span className={value ? 'text-gray-800' : 'text-gray-400'}>
           {value || placeholder || 'Select...'}
         </span>
-        <span className="text-gray-400 text-xs">{open ? '▲' : '▼'}</span>
+        <span className="text-gray-400 text-xs">{open ? '▼' : '▲'}</span>
       </div>
       {open && (
-        <div className="absolute z-50 w-full bg-white border border-gray-200 rounded-xl shadow-xl mt-1 max-h-60 overflow-hidden flex flex-col">
+        <div className="absolute z-50 w-full bg-white border border-gray-200 rounded-xl shadow-xl bottom-full mb-1 max-h-60 overflow-hidden flex flex-col">
           <div className="p-2 border-b border-gray-100">
             <input
               autoFocus

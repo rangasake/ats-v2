@@ -10,7 +10,11 @@ async function handler(req, res) {
     let rows = await getRows(SHEETS.INSPECTIONS);
 
     if (req.user.role === 'Inspector') {
-      rows = rows.filter((r) => r.inspector_username === req.user.username);
+      // Show inspections they own OR originally started (so they see takeover notifications)
+      rows = rows.filter(
+        (r) => r.inspector_username === req.user.username ||
+               r.originally_started_by === req.user.username
+      );
     }
     if (status) {
       rows = rows.filter((r) => r.status === status);
