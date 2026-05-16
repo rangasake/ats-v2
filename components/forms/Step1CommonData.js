@@ -41,6 +41,9 @@ export default function Step1CommonData({ data, onSave, loading }) {
   const [searchDone, setSearchDone] = useState(!!data?.vehicle_number);
   const [errors, setErrors] = useState({});
   const [noVehicleFound, setNoVehicleFound] = useState(false);
+  const [otherMandal, setOtherMandal] = useState(
+    data?.mandal_name && !MANDALS.includes(data.mandal_name) ? data.mandal_name : ''
+  );
 
   function set(field, value) {
     setForm((prev) => {
@@ -87,6 +90,7 @@ export default function Step1CommonData({ data, onSave, loading }) {
     if (!form.owner_name) err.owner_name = "Required";
     if (!form.owner_phone) err.owner_phone = "Required";
     if (!form.mandal_name) err.mandal_name = "Required";
+    if (form.mandal_name === 'OTHER' && !otherMandal.trim()) err.mandal_name = "Please enter the mandal name";
     if (!form.vehicle_lane) err.vehicle_lane = "Required";
     if (!form.lane_type) err.lane_type = "Required";
     if (!form.registration_date) err.registration_date = "Required";
@@ -95,7 +99,12 @@ export default function Step1CommonData({ data, onSave, loading }) {
   }
 
   function handleSave() {
-    if (validate()) onSave(form);
+    if (validate()) {
+      const finalForm = form.mandal_name === 'OTHER'
+        ? { ...form, mandal_name: otherMandal.trim(), rto_office: otherMandal.trim() }
+        : form;
+      onSave(finalForm);
+    }
   }
 
   return (
@@ -225,23 +234,40 @@ export default function Step1CommonData({ data, onSave, loading }) {
                 Mandal Name <span className="text-red-500">*</span>
               </label>
               <select
-                value={form.mandal_name}
-                onChange={(e) => set("mandal_name", e.target.value)}
+                value={MANDALS.includes(form.mandal_name) ? form.mandal_name : (form.mandal_name ? 'OTHER' : '')}
+                onChange={(e) => {
+                  if (e.target.value === 'OTHER') {
+                    set('mandal_name', 'OTHER');
+                  } else {
+                    setOtherMandal('');
+                    set('mandal_name', e.target.value);
+                  }
+                }}
                 className="form-input"
               >
                 <option value="">Select Mandal</option>
                 {MANDALS.map((m) => (
-                  <option key={m} value={m}>
-                    {m}
-                  </option>
+                  <option key={m} value={m}>{m}</option>
                 ))}
+                <option value="OTHER">Other</option>
               </select>
+              {(form.mandal_name === 'OTHER' || (form.mandal_name && !MANDALS.includes(form.mandal_name))) && (
+                <div className="mt-2">
+                  <label className="form-label">Other RTO Office Mandal Name <span className="text-red-500">*</span></label>
+                  <input
+                    type="text"
+                    placeholder="Enter RTO Office Mandal name"
+                    value={otherMandal}
+                    onChange={(e) => { setOtherMandal(e.target.value); setErrors((err) => ({ ...err, mandal_name: '' })); }}
+                    className="form-input"
+                  />
+                </div>
+              )}
               {errors.mandal_name && (
-                <p className="text-red-500 text-xs mt-1">
-                  {errors.mandal_name}
-                </p>
+                <p className="text-red-500 text-xs mt-1">{errors.mandal_name}</p>
               )}
             </div>
+            {form.mandal_name !== 'OTHER' && (
             <div className="mb-4">
               <label className="form-label">RTO Office</label>
               <input
@@ -252,6 +278,7 @@ export default function Step1CommonData({ data, onSave, loading }) {
                 placeholder="Auto-filled from Mandal"
               />
             </div>
+            )}
           </div>
 
           {/* Lane Info */}

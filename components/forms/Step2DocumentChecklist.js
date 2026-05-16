@@ -97,8 +97,11 @@ export default function Step2DocumentChecklist({ data, vehicleNumber, laneType, 
 
   const visibleItems = DOC_CHECKLIST_ITEMS.filter((item) => shouldShowItem(item, laneType, hiddenItems));
 
+  const [errors, setErrors] = useState({});
+
   function set(field, value) {
     setForm((prev) => ({ ...prev, [field]: value }));
+    if (errors[field]) setErrors((prev) => ({ ...prev, [field]: '' }));
   }
 
   /** When an expiry date changes, also recompute the next-expiry for that document */
@@ -112,6 +115,13 @@ export default function Step2DocumentChecklist({ data, vehicleNumber, laneType, 
   }
 
   function handleSave() {
+    const errs = {};
+    if (!form.test_date) errs.test_date = 'Test Date is required';
+    if (!form.test_type) errs.test_type = 'Test Type is required';
+    if (Object.keys(errs).length > 0) {
+      setErrors(errs);
+      return;
+    }
     onSave(form);
   }
 
@@ -131,7 +141,8 @@ export default function Step2DocumentChecklist({ data, vehicleNumber, laneType, 
             return (
               <div key={item.id} className="mb-4">
                 <label className="form-label">{item.label} <span className="text-red-500">*</span></label>
-                <DateInput value={form[item.id] || ''} onChange={(e) => set(item.id, e.target.value)} className="form-input" />
+                <DateInput value={form[item.id] || ''} onChange={(e) => set(item.id, e.target.value)} className={`form-input${errors[item.id] ? ' border-red-400' : ''}`} />
+                {errors[item.id] && <p className="text-red-500 text-xs mt-1">{errors[item.id]}</p>}
               </div>
             );
           }
@@ -139,10 +150,11 @@ export default function Step2DocumentChecklist({ data, vehicleNumber, laneType, 
             return (
               <div key={item.id} className="mb-4">
                 <label className="form-label">{item.label} <span className="text-red-500">*</span></label>
-                <select value={form[item.id] || ''} onChange={(e) => set(item.id, e.target.value)} className="form-input">
+                <select value={form[item.id] || ''} onChange={(e) => set(item.id, e.target.value)} className={`form-input${errors[item.id] ? ' border-red-400' : ''}`}>
                   <option value="">Select...</option>
                   {item.options.map((o) => <option key={o} value={o}>{o}</option>)}
                 </select>
+                {errors[item.id] && <p className="text-red-500 text-xs mt-1">{errors[item.id]}</p>}
               </div>
             );
           }

@@ -5,21 +5,21 @@ function safeParseJSON(str, fallback = {}) {
   try { return JSON.parse(str); } catch { return fallback; }
 }
 
-/** Formats the display certificate ID as ATSK-DDMMYYYY-LAST4OFVEHICLE */
-function formatCertId(testDate, vehicleNumber) {
-  let dateStr = '';
-  if (testDate) {
-    const d = new Date(testDate);
-    if (!isNaN(d.getTime())) {
-      dateStr = `${String(d.getDate()).padStart(2,'0')}${String(d.getMonth()+1).padStart(2,'0')}${d.getFullYear()}`;
-    }
-  }
-  if (!dateStr) {
-    const d = new Date();
-    dateStr = `${String(d.getDate()).padStart(2,'0')}${String(d.getMonth()+1).padStart(2,'0')}${d.getFullYear()}`;
-  }
-  const last4 = vehicleNumber ? vehicleNumber.trim().toUpperCase().slice(-4) : 'XXXX';
-  return `ATSK-${dateStr}-${last4}`;
+/** Formats the display certificate ID as ATSK-DDMMYYYY-NNN (fallback if cert_id not stored yet) */
+function formatCertId(certId, testDate) {
+  const d = testDate ? new Date(testDate) : new Date();
+  const dateStr = isNaN(d.getTime())
+    ? `${String(new Date().getDate()).padStart(2,'0')}${String(new Date().getMonth()+1).padStart(2,'0')}${new Date().getFullYear()}`
+    : `${String(d.getDate()).padStart(2,'0')}${String(d.getMonth()+1).padStart(2,'0')}${d.getFullYear()}`;
+
+  if (!certId) return `ATSK-${dateStr}-???`;
+
+  // Already fully formatted
+  if (certId.startsWith('ATSK-')) return certId;
+
+  // Just a serial number stored (e.g. "007" or "7") — prefix with date
+  const serial = String(parseInt(certId, 10) || certId).padStart(3, '0');
+  return `ATSK-${dateStr}-${serial}`;
 }
 
 // Telugu disclaimer points
@@ -39,7 +39,6 @@ const S = {
     color: '#1a1a2e',
     background: '#fff',
     width: '210mm',
-    minHeight: '297mm',
     margin: '0 auto',
     padding: '8mm 10mm',
     boxSizing: 'border-box',
@@ -341,7 +340,7 @@ const PrintLayout = forwardRef(function PrintLayout({ inspection, vehicle }, ref
     { label: 'Test Type',         value: inspection.test_type },
     { label: 'AFMS Receipt',      value: inspection.afms_free_receipt },
     { label: 'RC',                value: inspection.rc },
-    { label: 'Last RC / Expiry',  value: `${inspection.last_rc || '—'} / ${inspection.last_rc_expiry || '—'}` },
+    { label: 'Last FC / Expiry',  value: `${inspection.last_rc || '—'} / ${inspection.last_rc_expiry || '—'}` },
     { label: 'PUC / Expiry',      value: `${inspection.puc || '—'} / ${inspection.puc_expiry || '—'}` },
     { label: 'Insurance / Exp',   value: `${inspection.insurance || '—'} / ${inspection.insurance_expiry || '—'}` },
     { label: 'Insurance Co.',     value: inspection.insurance_company },
@@ -355,7 +354,7 @@ const PrintLayout = forwardRef(function PrintLayout({ inspection, vehicle }, ref
   })).filter((r) => r.value);
 
   return (
-    <div ref={ref} style={S.page}>
+    <div ref={ref} style={S.page} className="print-page">
 
       {/* ── HEADER ─────────────────────────────────────────────── */}
       <div style={S.header}>
@@ -372,7 +371,7 @@ const PrintLayout = forwardRef(function PrintLayout({ inspection, vehicle }, ref
 
       {/* ── ID BAR ─────────────────────────────────────────────── */}
       <div style={S.idBar}>
-        <span style={S.idItem}>Cert ID: <strong style={S.idVal}>{formatCertId(inspection.test_date, vehicle.vehicle_number)}</strong></span>
+        <span style={S.idItem}>Cert ID: <strong style={S.idVal}>{formatCertId(inspection.cert_id, inspection.test_date)}</strong></span>
         <span style={S.idItem}>Booking ID:
           {inspection.booking_id
             ? <strong style={S.idVal}>{inspection.booking_id}</strong>
@@ -380,7 +379,6 @@ const PrintLayout = forwardRef(function PrintLayout({ inspection, vehicle }, ref
         </span>
         <span style={S.idItem}>Date: <strong style={S.idVal}>{inspection.test_date || new Date().toLocaleDateString('en-IN')}</strong></span>
         <span style={S.idItem}>Type: <strong style={S.idVal}>{inspection.test_type || '—'}</strong></span>
-        {inspection.agent_phone && <span style={S.idItem}>Booking Ph: <strong style={S.idVal}>{inspection.agent_phone}</strong></span>}
         <span style={S.idItem}>Status: <strong style={{ ...S.idVal, color: '#059669' }}>{inspection.status}</strong></span>
       </div>
 
@@ -489,25 +487,38 @@ const PrintLayout = forwardRef(function PrintLayout({ inspection, vehicle }, ref
         </div>
       </div>
 
-      {/* ── FEEDBACK ────────────────────────────────────────────── */}
-      <div style={S.feedbackRow}>
-        <span style={S.feedbackLabel}>Customer Feedback:</span>
-        {['Bad', 'Good', 'Excellent'].map((opt) => (
-          <span key={opt} style={S.feedbackOpt}>
-            <span style={feedback === opt ? S.checkboxFilled : S.checkbox}>
-              {feedback === opt ? '✓' : ''}
+      {/* ── TEAR LINE with info strip ────────────────────────────── */}
+      <div style={{ margin: '8px 0 0' }}>
+        {/* Dashed tear line */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '3px 0' }}>
+          <div style={S.tearDash} />
+          <span style={S.tearText}>✂ &nbsp; Tear Here &nbsp; ✂</span>
+          <div style={S.tearDash} />
+        </div>
+        {/* Single info line below the dashes */}
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          fontSize: '8px', fontWeight: '700', color: '#374151',
+          padding: '3px 6px', background: '#f1f5f9',
+          borderRadius: '0 0 3px 3px', border: '1px solid #e2e8f0', borderTop: 'none',
+        }}>
+          <span style={{ color: '#1e3a8a' }}>
+            Feedback:&nbsp;
+            <span style={{
+              padding: '1px 6px', borderRadius: '3px',
+              background: feedback === 'Excellent' ? '#dcfce7' : feedback === 'Good' ? '#fef9c3' : feedback === 'Bad' ? '#fee2e2' : '#f3f4f6',
+              color: feedback === 'Excellent' ? '#15803d' : feedback === 'Good' ? '#854d0e' : feedback === 'Bad' ? '#b91c1c' : '#6b7280',
+            }}>
+              {feedback || '—'}
             </span>
-            {opt}
           </span>
-        ))}
-
-      </div>
-
-      {/* ── TEAR LINE ────────────────────────────────────────────── */}
-      <div style={S.tearLine}>
-        <div style={S.tearDash} />
-        <span style={S.tearText}>✂ &nbsp; Tear Here &nbsp; ✂</span>
-        <div style={S.tearDash} />
+          <span style={{ color: '#0e7490', fontSize: '9px', letterSpacing: '0.5px' }}>
+            Vehicle No:&nbsp;<strong>{vehicle.vehicle_number}</strong>
+          </span>
+          <span style={{ color: '#374151' }}>
+            Booking ID:&nbsp;<strong style={{ color: '#0e7490' }}>{inspection.booking_id || '—'}</strong>
+          </span>
+        </div>
       </div>
 
       {/* ── DISCLAIMER (Telugu) ───────────────────────────────────── */}

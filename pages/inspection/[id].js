@@ -140,7 +140,7 @@ function InspectionDetail() {
         <Section title="📄 Document Checklist">
           <InfoRow label="AFMS Receipt" value={inspection.afms_free_receipt} />
           <InfoRow label="RC" value={inspection.rc} />
-          <InfoRow label="Last RC / Expiry" value={`${inspection.last_rc || '-'} / ${inspection.last_rc_expiry || '-'}`} />
+          <InfoRow label="Last FC / Expiry" value={`${inspection.last_rc || '-'} / ${inspection.last_rc_expiry || '-'}`} />
           <InfoRow label="PUC / Expiry" value={`${inspection.puc || '-'} / ${inspection.puc_expiry || '-'}`} />
           <InfoRow label="Insurance" value={`${inspection.insurance || '-'} / ${inspection.insurance_expiry || '-'}`} />
           <InfoRow label="Insurance Co." value={inspection.insurance_company} />

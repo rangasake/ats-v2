@@ -125,14 +125,7 @@ export default function Step3VisualChecklist({ data, laneType, hiddenItems = [],
         Vehicle number <strong>{vehicleNumber} </strong> |  Lane type: <strong>{laneType}</strong> 
         </p>
  )}
-        {/* ── NEW: Image upload section ── */}
-        <ImageUploader
-          inspectionId={inspectionId}
-          vehicleNumber={vehicleNumber}
-          onUploadComplete={handleUploadComplete}
-          existingUrls={uploadedImages}
-        />
-
+        {/* ── Step 1: Pin Location first ── */}
         <div className="mb-4">
           <label className="form-label">
             Vehicle Location <span className="text-red-500">*</span>
@@ -143,11 +136,11 @@ export default function Step3VisualChecklist({ data, laneType, hiddenItems = [],
             disabled={locationLoading}
             className="w-full py-3 border-2 border-blue-300 rounded-xl text-sm font-semibold text-blue-700 bg-blue-50 active:scale-95 transition-all disabled:opacity-50"
           >
-            {locationLoading ? 'Capturing Location...' : '📍 Pin Location'}
+            {locationLoading ? 'Capturing Location...' : latLong ? '📍 Re-pin Location' : '📍 Pin Location'}
           </button>
           {latLong && (
             <div className="mt-2 bg-green-50 border border-green-200 text-green-700 text-sm rounded-xl px-4 py-3">
-              <div className="font-semibold">Latitude / Longitude</div>
+              <div className="font-semibold">✅ Location Pinned</div>
               <div className="font-mono text-xs mt-1">{latLong}</div>
             </div>
           )}
@@ -157,6 +150,22 @@ export default function Step3VisualChecklist({ data, laneType, hiddenItems = [],
             </div>
           )}
         </div>
+
+        {/* ── Step 2: Photos — locked until location is pinned ── */}
+        {!latLong && (
+          <div className="mb-4 rounded-xl border-2 border-dashed border-gray-200 bg-gray-50 px-4 py-6 text-center text-sm text-gray-400">
+            📍 Pin your location above to enable photo capture
+          </div>
+        )}
+        {latLong && (
+          <ImageUploader
+            inspectionId={inspectionId}
+            vehicleNumber={vehicleNumber}
+            latLong={latLong}
+            onUploadComplete={handleUploadComplete}
+            existingUrls={uploadedImages}
+          />
+        )}
 
         {imageError && (
           <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl px-4 py-3 mb-4">

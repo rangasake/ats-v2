@@ -10,7 +10,7 @@ const CONFIG = {
 export default function StatusBadge({ status }) {
   const cfg = CONFIG[status] || CONFIG[INSPECTION_STATUS.DRAFT];
   return (
-    <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold ${cfg.bg} ${cfg.text}`}>
+    <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-[12px] font-bold ${cfg.bg} ${cfg.text}`}>
       {cfg.icon} {status}
     </span>
   );

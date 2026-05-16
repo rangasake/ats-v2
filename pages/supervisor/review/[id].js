@@ -20,6 +20,8 @@ function SupervisorReview() {
   const [agentPhone, setAgentPhone] = useState('');
   const [agentName, setAgentName] = useState('');
   const [agentLookingUp, setAgentLookingUp] = useState(false);
+  const [newAgentName, setNewAgentName] = useState('');
+  const [savingAgent, setSavingAgent] = useState(false);
   const [bookingId, setBookingId] = useState('');
   const [remarks, setRemarks] = useState('');
   const [error, setError] = useState('');
@@ -49,12 +51,31 @@ function SupervisorReview() {
   async function lookupAgent() {
     if (!agentPhone || agentPhone.length < 10) return;
     setAgentLookingUp(true);
+    setNewAgentName('');
     try {
       const res = await fetch(`/api/supervisor/agent-lookup?phone=${agentPhone}`);
       const data = await res.json();
       if (data.found) setAgentName(data.agent.name || '');
+      else setAgentName('');
     } catch (e) {}
     finally { setAgentLookingUp(false); }
+  }
+
+  async function saveNewAgent() {
+    if (!newAgentName.trim()) return;
+    setSavingAgent(true);
+    try {
+      const res = await fetch('/api/supervisor/agent-lookup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: agentPhone, name: newAgentName.trim() }),
+      });
+      if (res.ok) {
+        setAgentName(newAgentName.trim());
+        setNewAgentName('');
+      }
+    } catch (e) {}
+    finally { setSavingAgent(false); }
   }
 
   async function handleAction(action) {
@@ -169,7 +190,7 @@ function SupervisorReview() {
               <input
                 type="tel"
                 value={agentPhone}
-                onChange={(e) => setAgentPhone(e.target.value)}
+                onChange={(e) => { setAgentPhone(e.target.value); setAgentName(''); }}
                 onBlur={lookupAgent}
                 className="form-input"
                 placeholder="Enter 10-digit phone"
@@ -178,6 +199,37 @@ function SupervisorReview() {
               {agentLookingUp && <div className="py-3 px-3 text-gray-400 text-sm">...</div>}
             </div>
           </div>
+
+          {agentPhone.length >= 10 && (
+            <div className="mb-4">
+              <label className="form-label">Agent Name</label>
+              {agentLookingUp ? (
+                <div className="form-input bg-gray-50 text-gray-400 text-sm">Looking up...</div>
+              ) : agentName ? (
+                <div className="form-input bg-green-50 text-green-800 font-semibold">{agentName}</div>
+              ) : (
+                <div>
+                  <div className="form-input bg-red-50 text-red-500 text-sm mb-3">No agent found for this number</div>
+                  <p className="text-xs text-gray-400 mb-2">Want to save this number as an agent?</p>
+                  <input
+                    type="text"
+                    value={newAgentName}
+                    onChange={(e) => setNewAgentName(e.target.value)}
+                    placeholder="Enter agent name"
+                    className="form-input mb-2"
+                  />
+                  <button
+                    type="button"
+                    onClick={saveNewAgent}
+                    disabled={savingAgent || !newAgentName.trim()}
+                    className="btn-primary w-full text-sm"
+                  >
+                    {savingAgent ? 'Saving...' : 'Save Agent'}
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
 
           <div className="mb-4">
             <label className="form-label">

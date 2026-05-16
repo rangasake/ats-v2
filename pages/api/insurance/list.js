@@ -14,10 +14,10 @@ async function handler(req, res) {
     // If Google Sheets has data, use it; otherwise fall back to constants
     const companies = sheetCompanies.length > 0 ? sheetCompanies : INSURANCE_COMPANIES;
 
+    res.setHeader('Cache-Control', 'private, max-age=300, stale-while-revalidate=60');
     return res.status(200).json({ companies });
   } catch (err) {
     console.error('Insurance list error:', err);
-    // Fall back to hardcoded list on any error
     return res.status(200).json({ companies: INSURANCE_COMPANIES });
   }
 }

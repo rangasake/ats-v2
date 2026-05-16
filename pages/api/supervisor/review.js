@@ -1,6 +1,27 @@
 import { requireAuth } from '../../../lib/auth';
-import { findRow, updateRow, appendRow } from '../../../lib/googleSheets';
+import { findRow, getRows, updateRow, appendRow, ensureHeaders } from '../../../lib/googleSheets';
 import { SHEETS, INSPECTION_STATUS } from '../../../lib/constants';
+
+/** Generate ATSK-DDMMYYYY-NNN, incrementing from the highest existing serial for that date */
+async function generateCertId(testDate) {
+  const d = testDate ? new Date(testDate) : new Date();
+  const dateStr = `${String(d.getDate()).padStart(2,'0')}${String(d.getMonth()+1).padStart(2,'0')}${d.getFullYear()}`;
+  const prefix = `ATSK-${dateStr}-`;
+  const all = await getRows(SHEETS.INSPECTIONS);
+  const serials = all
+    .map((r) => r.cert_id)
+    .filter(Boolean)
+    .map((cid) => {
+      // Handle fully formatted: ATSK-17052026-007
+      if (cid.startsWith(prefix)) return parseInt(cid.slice(prefix.length), 10);
+      // Handle bare serial stored for the same test_date (e.g. "007" or "7")
+      // Only count if the row's test_date matches
+      return NaN;
+    })
+    .filter((n) => !isNaN(n));
+  const next = serials.length > 0 ? Math.max(...serials) + 1 : 1;
+  return `${prefix}${String(next).padStart(3, '0')}`;
+}
 
 async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end();
@@ -53,6 +74,14 @@ async function handler(req, res) {
       }
     }
 
+    await ensureHeaders(SHEETS.INSPECTIONS, ['agent_phone', 'agent_name', 'cert_id']);
+
+    // Generate cert_id only on approval (not rejection)
+    let certId = '';
+    if (action === 'approve') {
+      certId = await generateCertId(inspection.test_date);
+    }
+
     await updateRow(SHEETS.INSPECTIONS, 'inspection_id', inspection_id, {
       status:              newStatus,
       supervisor_username: req.user.username,
@@ -60,10 +89,11 @@ async function handler(req, res) {
       agent_name:          agent_name  || '',
       booking_id:          finalBookingId,
       supervisor_remarks:  supervisor_remarks || '',
+      ...(certId ? { cert_id: certId } : {}),
       updated_at:          now,
     });
 
-    return res.status(200).json({ success: true, status: newStatus, booking_id: finalBookingId });
+    return res.status(200).json({ success: true, status: newStatus, booking_id: finalBookingId, ...(certId ? { cert_id: certId } : {}) });
   } catch (err) {
     console.error('Review error:', err);
     return res.status(500).json({ error: 'Server error' });

@@ -12,6 +12,7 @@ async function handler(req, res) {
   try {
     const staff = await getRows(SHEETS.STAFF);
     const active = staff.filter(isActive);
+    res.setHeader('Cache-Control', 'private, max-age=120, stale-while-revalidate=30');
     return res.status(200).json({ staff: active });
   } catch (err) {
     return res.status(500).json({ error: 'Server error' });

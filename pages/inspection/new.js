@@ -178,11 +178,15 @@ function NewInspection() {
     setLoading(true);
     setError('');
     try {
-      await fetch('/api/inspection/save', {
+      const res = await fetch('/api/inspection/save', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ inspection_id: inspectionId, step: 2, ...formData }),
       });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || 'Failed to save documents');
+      }
       setDocData(formData);
       setStep(3);
     } catch (e) {
@@ -211,7 +215,7 @@ function NewInspection() {
         } catch {}
       }
 
-      await fetch('/api/inspection/save', {
+      const saveRes = await fetch('/api/inspection/save', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -223,6 +227,10 @@ function NewInspection() {
           lat_long:        lat_long || '',
         }),
       });
+      if (!saveRes.ok) {
+        const saveData = await saveRes.json().catch(() => ({}));
+        throw new Error(saveData.error || 'Failed to save visual data');
+      }
       setVisualData(formData);
       setStep(4);
     } catch (e) {
@@ -230,6 +238,15 @@ function NewInspection() {
     } finally {
       setLoading(false);
     }
+  }
+
+  // Maps a server-reported missing field label to the step it belongs to
+  function fieldLabelToStep(label) {
+    const step2 = ['Test Date', 'Test Type'];
+    const step3 = ['Vehicle Location'];
+    if (step2.some((f) => label.includes(f))) return 2;
+    if (step3.some((f) => label.includes(f))) return 3;
+    return 4; // lane_inspector / lane_incharge default to step 4
   }
 
   // ── Step 4 ────────────────────────────────────────────────────────────────
@@ -242,10 +259,24 @@ function NewInspection() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ inspection_id: inspectionId, ...formData }),
       });
-      if (!res.ok) throw new Error('Failed to submit');
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        const msg = data.error || 'Failed to submit';
+        // If error mentions missing fields, extract them and navigate to the earliest step
+        const missingMatch = msg.match(/Missing required fields?:\s*(.+)/i);
+        if (missingMatch) {
+          const fields = missingMatch[1].split(',').map((s) => s.trim());
+          const earliestStep = fields.reduce((min, f) => Math.min(min, fieldLabelToStep(f)), 4);
+          setError(`Step ${earliestStep} incomplete — ${fields.join(', ')} required`);
+          setStep(earliestStep);
+        } else {
+          setError(msg);
+        }
+        return;
+      }
       router.push(`/inspection/${inspectionId}?submitted=1`);
     } catch (e) {
-      setError(e.message);
+      setError(e.message || 'Failed to submit');
     } finally {
       setLoading(false);
     }

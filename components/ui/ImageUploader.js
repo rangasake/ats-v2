@@ -71,6 +71,37 @@ function compressImage(file) {
   });
 }
 
+// ── Burn lat/long watermark onto image canvas ───────────────
+function burnLatLong(dataUrl, latLong) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width  = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext('2d');
+
+      ctx.drawImage(img, 0, 0);
+
+      // Dark bar at bottom
+      const barH    = Math.max(22, Math.round(img.height * 0.06));
+      ctx.fillStyle = 'rgba(0,0,0,0.60)';
+      ctx.fillRect(0, img.height - barH, img.width, barH);
+
+      // Coordinates text
+      const fontSize = Math.max(11, Math.round(img.height * 0.026));
+      ctx.fillStyle   = '#ffffff';
+      ctx.font        = `bold ${fontSize}px Arial`;
+      ctx.textAlign   = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(`\uD83D\uDCCD ${latLong}`, img.width / 2, img.height - barH / 2);
+
+      resolve(canvas.toDataURL('image/jpeg', 0.92));
+    };
+    img.src = dataUrl;
+  });
+}
+
 // ── Validate a raw File before compressing ────────────────────
 function validateFile(file, existingCount) {
   if (existingCount >= MAX_IMAGES) {
@@ -135,7 +166,7 @@ function ImageSlot({ slot, index, onRemove }) {
 }
 
 // ── Main component ────────────────────────────────────────────
-export default function ImageUploader({ inspectionId, vehicleNumber, onUploadComplete, existingUrls = [] }) {
+export default function ImageUploader({ inspectionId, vehicleNumber, latLong = '', onUploadComplete, existingUrls = [] }) {
   const [slots, setSlots]           = useState(
     // Pre-fill with any already-uploaded URLs (e.g. resume)
     existingUrls.map((u, i) => ({ dataUrl: u.directUrl, label: u.label || `Image ${i+1}`, sizeBytes: 0, status: 'done', ...u }))
@@ -210,7 +241,15 @@ export default function ImageUploader({ inspectionId, vehicleNumber, onUploadCom
     setSlots((prev) => prev.map((s) => ({ ...s, status: 'uploading' })));
 
     try {
-      const images = slots.map((s) => ({ dataUrl: s.dataUrl, label: s.label }));
+      // Burn lat/long watermark onto each image before uploading
+      const images = await Promise.all(
+        slots.map(async (s) => {
+          const finalDataUrl = latLong?.trim()
+            ? await burnLatLong(s.dataUrl, latLong.trim())
+            : s.dataUrl;
+          return { dataUrl: finalDataUrl, label: s.label };
+        })
+      );
 
       const res  = await fetch('/api/inspection/upload-images', {
         method: 'POST',
