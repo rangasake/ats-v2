@@ -49,7 +49,7 @@
   .print-only { display: block !important; }
   body { background: white; }
   .print-page {
-    zoom: 0.78;
+    zoom: 0.91;
     margin: 0 auto !important;
     box-shadow: none !important;
     page-break-after: avoid;
