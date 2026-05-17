@@ -99,6 +99,10 @@ export default function Step2DocumentChecklist({ data, vehicleNumber, laneType, 
 
   const [errors, setErrors] = useState({});
 
+  // Restrict test_date to today and 2 days back
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const minDateStr = (() => { const d = new Date(); d.setDate(d.getDate() - 2); return d.toISOString().slice(0, 10); })();
+
   function set(field, value) {
     setForm((prev) => ({ ...prev, [field]: value }));
     if (errors[field]) setErrors((prev) => ({ ...prev, [field]: '' }));
@@ -138,10 +142,17 @@ export default function Step2DocumentChecklist({ data, vehicleNumber, laneType, 
 
         {visibleItems.map((item) => {
           if (item.type === 'date_only') {
+            const isTestDate = item.id === 'test_date';
             return (
               <div key={item.id} className="mb-4">
                 <label className="form-label">{item.label} <span className="text-red-500">*</span></label>
-                <DateInput value={form[item.id] || ''} onChange={(e) => set(item.id, e.target.value)} className={`form-input${errors[item.id] ? ' border-red-400' : ''}`} />
+                <DateInput
+                  value={form[item.id] || ''}
+                  onChange={(e) => set(item.id, e.target.value)}
+                  className={`form-input${errors[item.id] ? ' border-red-400' : ''}`}
+                  min={isTestDate ? minDateStr : undefined}
+                  max={isTestDate ? todayStr : undefined}
+                />
                 {errors[item.id] && <p className="text-red-500 text-xs mt-1">{errors[item.id]}</p>}
               </div>
             );

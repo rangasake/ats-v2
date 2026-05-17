@@ -24,6 +24,8 @@ function SupervisorReview() {
   const [savingAgent, setSavingAgent] = useState(false);
   const [bookingId, setBookingId] = useState('');
   const [remarks, setRemarks] = useState('');
+  const [inspectionResult, setInspectionResult] = useState('');
+  const [failReason, setFailReason] = useState('');
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -81,17 +83,33 @@ function SupervisorReview() {
   async function handleAction(action) {
     setSubmitting(true);
     setError('');
+
+    if (!inspectionResult) {
+      setError('Please select Inspection Result (Pass or Fail) before proceeding.');
+      setSubmitting(false);
+      window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+      return;
+    }
+    if (inspectionResult === 'Fail' && !failReason.trim()) {
+      setError('Please enter a Fail Reason before rejecting.');
+      setSubmitting(false);
+      window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+      return;
+    }
+
     try {
       const res = await fetch('/api/supervisor/review', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          inspection_id: id,
+          inspection_id:      id,
           action,
-          agent_phone: agentPhone,
-          agent_name: agentName,
-          booking_id: bookingId.trim().toUpperCase(),
+          agent_phone:        agentPhone,
+          agent_name:         agentName,
+          booking_id:         bookingId.trim().toUpperCase(),
           supervisor_remarks: remarks,
+          inspection_result:  inspectionResult,
+          fail_reason:        inspectionResult === 'Fail' ? failReason.trim() : '',
         }),
       });
       const data = await res.json();
@@ -256,6 +274,36 @@ function SupervisorReview() {
               placeholder="Optional remarks..."
             />
           </div>
+
+          <div className="mb-4">
+            <label className="form-label">
+              Inspection Result <span className="text-red-500">*</span>
+            </label>
+            <select
+              value={inspectionResult}
+              onChange={(e) => { setInspectionResult(e.target.value); setFailReason(''); }}
+              className="form-input"
+            >
+              <option value="">-- Select Result --</option>
+              <option value="Pass">✅ Pass</option>
+              <option value="Fail">❌ Fail</option>
+            </select>
+          </div>
+
+          {inspectionResult === 'Fail' && (
+            <div className="mb-4">
+              <label className="form-label">
+                Fail Reason <span className="text-red-500">*</span>
+              </label>
+              <textarea
+                value={failReason}
+                onChange={(e) => setFailReason(e.target.value)}
+                className="form-input border-red-300 focus:ring-red-400"
+                rows={3}
+                placeholder="Describe the reason for failure..."
+              />
+            </div>
+          )}
         </div>
 
         {error && (
@@ -284,7 +332,7 @@ function SupervisorReview() {
             disabled={submitting}
             className="w-full py-3 rounded-xl border-2 border-red-400 text-red-600 font-semibold text-base active:scale-95 transition-all disabled:opacity-50"
           >
-            ❌ Reject Inspection
+            ❌ Reject / Fail Inspection
           </button>
           <button
             onClick={() => router.push('/supervisor')}

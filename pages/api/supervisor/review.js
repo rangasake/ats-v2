@@ -1,5 +1,5 @@
 import { requireAuth } from '../../../lib/auth';
-import { findRow, getRows, updateRow, appendRow, ensureHeaders } from '../../../lib/googleSheets';
+import { findRow, getRows, updateRow, appendRow, ensureHeaders, logAudit } from '../../../lib/googleSheets';
 import { SHEETS, INSPECTION_STATUS } from '../../../lib/constants';
 
 /** Generate ATSK-DDMMYYYY-NNN, incrementing from the highest existing serial for that date */
@@ -26,7 +26,7 @@ async function generateCertId(testDate) {
 async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end();
 
-  const { inspection_id, action, agent_phone, agent_name, booking_id, supervisor_remarks } = req.body;
+  const { inspection_id, action, agent_phone, agent_name, booking_id, supervisor_remarks, inspection_result, fail_reason } = req.body;
   if (!inspection_id || !action) return res.status(400).json({ error: 'inspection_id and action required' });
 
   try {
@@ -47,6 +47,7 @@ async function handler(req, res) {
         booking_id:         '',   // clear old booking id
         updated_at:         now,
       });
+      logAudit(req.user.username, 'REOPEN', inspection_id, inspection.vehicle_number || '').catch(() => {});
       return res.status(200).json({ success: true, status: INSPECTION_STATUS.DRAFT });
     }
 
@@ -74,7 +75,7 @@ async function handler(req, res) {
       }
     }
 
-    await ensureHeaders(SHEETS.INSPECTIONS, ['agent_phone', 'agent_name', 'cert_id']);
+    await ensureHeaders(SHEETS.INSPECTIONS, ['agent_phone', 'agent_name', 'cert_id', 'inspection_result', 'fail_reason']);
 
     // Generate cert_id only on approval (not rejection)
     let certId = '';
@@ -89,9 +90,20 @@ async function handler(req, res) {
       agent_name:          agent_name  || '',
       booking_id:          finalBookingId,
       supervisor_remarks:  supervisor_remarks || '',
+      inspection_result:   inspection_result || '',
+      fail_reason:         inspection_result === 'Fail' ? (fail_reason || '') : '',
       ...(certId ? { cert_id: certId } : {}),
       updated_at:          now,
     });
+
+    const auditAction = action === 'approve' ? 'APPROVE' : 'REJECT';
+    logAudit(
+      req.user.username,
+      auditAction,
+      inspection_id,
+      inspection.vehicle_number || '',
+      inspection_result === 'Fail' ? `Fail: ${fail_reason}` : inspection_result || ''
+    ).catch(() => {});
 
     return res.status(200).json({ success: true, status: newStatus, booking_id: finalBookingId, ...(certId ? { cert_id: certId } : {}) });
   } catch (err) {

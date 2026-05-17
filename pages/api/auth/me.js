@@ -8,5 +8,6 @@ export default function handler(req, res) {
   if (!user) return res.status(401).json({ error: 'Invalid token' });
 
   res.setHeader('Cache-Control', 'private, max-age=60, must-revalidate');
-  return res.status(200).json({ user: { username: user.username, name: user.name, role: user.role } });
+  // Include exp (Unix seconds) so the client can warn before session expires
+  return res.status(200).json({ user: { username: user.username, name: user.name, role: user.role, exp: user.exp } });
 }

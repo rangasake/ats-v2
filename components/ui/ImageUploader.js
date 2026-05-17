@@ -71,8 +71,8 @@ function compressImage(file) {
   });
 }
 
-// ── Burn lat/long watermark onto image canvas ───────────────
-function burnLatLong(dataUrl, latLong) {
+// ── Burn lat/long, inspection ID and timestamp onto image canvas ──
+function burnLatLong(dataUrl, latLong, inspectionId, timestamp) {
   return new Promise((resolve) => {
     const img = new Image();
     img.onload = () => {
@@ -83,18 +83,24 @@ function burnLatLong(dataUrl, latLong) {
 
       ctx.drawImage(img, 0, 0);
 
-      // Dark bar at bottom
-      const barH    = Math.max(22, Math.round(img.height * 0.06));
-      ctx.fillStyle = 'rgba(0,0,0,0.60)';
+      // Two-line dark bar at bottom
+      const fontSize = Math.max(11, Math.round(img.height * 0.026));
+      const lineH    = fontSize + 6;
+      const barH     = lineH * 2 + 8;
+      ctx.fillStyle  = 'rgba(0,0,0,0.60)';
       ctx.fillRect(0, img.height - barH, img.width, barH);
 
-      // Coordinates text
-      const fontSize = Math.max(11, Math.round(img.height * 0.026));
-      ctx.fillStyle   = '#ffffff';
-      ctx.font        = `bold ${fontSize}px Arial`;
-      ctx.textAlign   = 'center';
+      ctx.fillStyle    = '#ffffff';
+      ctx.font         = `bold ${fontSize}px Arial`;
+      ctx.textAlign    = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText(`\uD83D\uDCCD ${latLong}`, img.width / 2, img.height - barH / 2);
+
+      // Line 1 — coordinates
+      ctx.fillText(`\uD83D\uDCCD ${latLong}`, img.width / 2, img.height - barH + lineH / 2 + 4);
+
+      // Line 2 — inspection ID + timestamp
+      const line2 = [inspectionId && `ID: ${inspectionId}`, timestamp].filter(Boolean).join('  |  ');
+      ctx.fillText(line2, img.width / 2, img.height - lineH / 2 - 4);
 
       resolve(canvas.toDataURL('image/jpeg', 0.92));
     };
@@ -241,11 +247,16 @@ export default function ImageUploader({ inspectionId, vehicleNumber, latLong = '
     setSlots((prev) => prev.map((s) => ({ ...s, status: 'uploading' })));
 
     try {
-      // Burn lat/long watermark onto each image before uploading
+      // Burn lat/long, inspection ID and timestamp watermark onto each image before uploading
+      const now = new Date();
+      const timestamp = now.toLocaleString('en-IN', {
+        day: '2-digit', month: '2-digit', year: 'numeric',
+        hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false,
+      });
       const images = await Promise.all(
         slots.map(async (s) => {
           const finalDataUrl = latLong?.trim()
-            ? await burnLatLong(s.dataUrl, latLong.trim())
+            ? await burnLatLong(s.dataUrl, latLong.trim(), inspectionId, timestamp)
             : s.dataUrl;
           return { dataUrl: finalDataUrl, label: s.label };
         })
@@ -300,6 +311,26 @@ export default function ImageUploader({ inspectionId, vehicleNumber, latLong = '
         📦 Images auto-compressed to {Math.round(COMPRESS_CONFIG.quality * 100)}% quality,
         max {COMPRESS_CONFIG.maxWidthPx}px wide — saves storage & speeds upload
       </div>
+
+      {/* Photo guide — show until all slots are filled */}
+      {slots.length < MAX_IMAGES && (
+        <div className="bg-blue-50 border border-blue-100 rounded-xl px-3 py-3 mb-3">
+          <p className="text-xs font-bold text-blue-700 mb-2">📸 Required Photos ({slots.length}/{MAX_IMAGES})</p>
+          <div className="grid grid-cols-4 gap-2">
+            {[
+              { label: 'Front',      icon: '⬆️', done: slots.length >= 1 },
+              { label: 'Rear',       icon: '⬇️', done: slots.length >= 2 },
+              { label: 'Left Side',  icon: '⬅️', done: slots.length >= 3 },
+              { label: 'Right Side', icon: '➡️', done: slots.length >= 4 },
+            ].map((shot) => (
+              <div key={shot.label} className={`flex flex-col items-center rounded-xl py-2 gap-1 border ${ shot.done ? 'bg-green-50 border-green-200' : 'bg-white border-blue-200'}`}>
+                <span className="text-lg">{shot.done ? '✅' : shot.icon}</span>
+                <span className={`text-xs font-semibold ${shot.done ? 'text-green-600' : 'text-blue-600'}`}>{shot.label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Image grid */}
       <div className="grid grid-cols-2 gap-3 mb-3">

@@ -1,5 +1,5 @@
 import { requireAuth } from '../../../lib/auth';
-import { findRow, updateRow } from '../../../lib/googleSheets';
+import { findRow, updateRow, logAudit } from '../../../lib/googleSheets';
 import { SHEETS, INSPECTION_STATUS } from '../../../lib/constants';
 
 async function handler(req, res) {
@@ -51,6 +51,7 @@ async function handler(req, res) {
       updated_at: new Date().toISOString(),
     });
 
+    logAudit(req.user.username, 'SUBMIT', inspection_id, existing.vehicle_number || '').catch(() => {});
     return res.status(200).json({ success: true });
   } catch (err) {
     console.error('Submit error:', err);

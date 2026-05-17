@@ -10,6 +10,7 @@ export default function Step4StaffFeedback({ data, onSubmit, onBack, loading }) 
     ...data,
   });
   const [staff, setStaff] = useState([]);
+  const [showConfirm, setShowConfirm] = useState(false);
 
   useEffect(() => {
     fetch('/api/staff/list')
@@ -107,13 +108,57 @@ export default function Step4StaffFeedback({ data, onSubmit, onBack, loading }) 
         </button>
         <button
           type="button"
-          onClick={() => onSubmit(form)}
+          onClick={() => setShowConfirm(true)}
           disabled={loading || !form.lane_inspector || !form.lane_incharge}
           className="btn-success"
         >
-          {loading ? 'Submitting...' : '✅ Submit for Review'}
+          ✅ Submit for Review
         </button>
       </div>
+
+      {/* ── Confirmation Modal ── */}
+      {showConfirm && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 px-4 pb-6">
+          <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden">
+            <div className="bg-blue-600 px-5 py-4">
+              <h3 className="text-white font-bold text-lg">Confirm Submission</h3>
+              <p className="text-blue-200 text-xs mt-0.5">Please verify details before submitting for review</p>
+            </div>
+            <div className="px-5 py-4 space-y-2">
+              <SummaryRow label="Lane Inspector" value={form.lane_inspector} />
+              <SummaryRow label="Lane Incharge"  value={form.lane_incharge} />
+              <SummaryRow label="Feedback"       value={form.feedback || '—'} />
+              {form.remarks && <SummaryRow label="Remarks" value={form.remarks} />}
+            </div>
+            <div className="px-5 pb-5 flex gap-3">
+              <button
+                type="button"
+                onClick={() => setShowConfirm(false)}
+                className="flex-1 py-3 rounded-xl border-2 border-gray-300 text-gray-600 font-semibold text-sm active:scale-95 transition-all"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => { setShowConfirm(false); onSubmit(form); }}
+                disabled={loading}
+                className="flex-1 py-3 rounded-xl bg-green-600 text-white font-bold text-sm active:scale-95 transition-all disabled:opacity-50"
+              >
+                {loading ? 'Submitting...' : 'Confirm & Submit'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function SummaryRow({ label, value }) {
+  return (
+    <div className="flex justify-between items-center py-2 border-b border-gray-100 last:border-0 text-sm">
+      <span className="text-gray-500">{label}</span>
+      <span className="font-semibold text-gray-800 text-right">{value}</span>
     </div>
   );
 }

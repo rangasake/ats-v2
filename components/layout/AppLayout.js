@@ -4,6 +4,8 @@ import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { ROLES } from '../../lib/constants';
 
+const WARNING_MS = 10 * 60 * 1000; // warn 10 min before expiry
+
 const STATUS_COLORS = {
   Approved: 'bg-green-100 text-green-700',
   Rejected: 'bg-red-100 text-red-600',
@@ -12,21 +14,55 @@ const STATUS_COLORS = {
 };
 
 export default function AppLayout({ children, title }) {
-  const { user, logout } = useAuth();
+  const { user, logout, sessionExpiry, renewSession } = useAuth();
   const router = useRouter();
-  const [menuOpen, setMenuOpen]       = useState(false);
+  const [menuOpen, setMenuOpen]             = useState(false);
+  const [sessionWarning, setSessionWarning] = useState(false);
+  const [minsLeft, setMinsLeft]             = useState(0);
+  const [renewing, setRenewing]             = useState(false);
+
+  // ── Session expiry countdown ───────────────────────────────────────────────
+  useEffect(() => {
+    if (!sessionExpiry) return;
+    const tick = () => {
+      const remaining = sessionExpiry - Date.now();
+      if (remaining <= 0) { setSessionWarning(false); return; }
+      if (remaining <= WARNING_MS) {
+        setMinsLeft(Math.ceil(remaining / 60000));
+        setSessionWarning(true);
+      } else {
+        setSessionWarning(false);
+      }
+    };
+    tick();
+    const id = setInterval(tick, 30000);
+    return () => clearInterval(id);
+  }, [sessionExpiry]);
+
+  async function handleRenew() {
+    setRenewing(true);
+    const ok = await renewSession();
+    setRenewing(false);
+    if (ok) setSessionWarning(false);
+  }
 
   // ── Notifications ──────────────────────────────────────────────────────────
   const [notifications, setNotifications] = useState([]);
-  const [dismissedIds, setDismissedIds]   = useState(() => {
-    if (typeof window === 'undefined') return [];
-    try { return JSON.parse(sessionStorage.getItem('ats_notif_dismissed') || '[]'); } catch { return []; }
-  });
+  const [dismissedIds, setDismissedIds]   = useState([]);
   const [panelOpen, setPanelOpen]         = useState(false);
   const [popupOpen, setPopupOpen]         = useState(false);
   const [notifLoaded, setNotifLoaded]     = useState(false);
 
-  // NOTE: dismissedIds is seeded from sessionStorage synchronously above — no extra useEffect needed.
+  // Re-seed dismissed IDs whenever the logged-in user changes
+  useEffect(() => {
+    if (!user) return;
+    try {
+      const key = `ats_notif_dismissed_${user.username}`;
+      const stored = JSON.parse(sessionStorage.getItem(key) || '[]');
+      setDismissedIds(stored);
+    } catch { setDismissedIds([]); }
+    setNotifLoaded(false);
+  }, [user?.username]);
 
   // Fetch notifications
   useEffect(() => {
@@ -42,23 +78,54 @@ export default function AppLayout({ children, title }) {
 
   // Show popup once per session for unseen notifications
   useEffect(() => {
-    if (!notifLoaded || notifications.length === 0) return;
-    const stored = JSON.parse(sessionStorage.getItem('ats_notif_dismissed') || '[]');
+    if (!notifLoaded || notifications.length === 0 || !user) return;
+    const key = `ats_notif_dismissed_${user.username}`;
+    const stored = JSON.parse(sessionStorage.getItem(key) || '[]');
     const unseen = notifications.filter((n) => !stored.includes(n.id));
     if (unseen.length > 0) setPopupOpen(true);
-  }, [notifLoaded]);
+  }, [notifLoaded, user?.username]);
 
-  const unseenCount = notifications.filter((n) => !dismissedIds.includes(n.inspection_id)).length;
+  const unseenCount = notifications.filter((n) => !dismissedIds.includes(n.id)).length;
 
   function markAllSeen() {
     const allIds  = notifications.map((n) => n.id);
     const merged  = [...new Set([...dismissedIds, ...allIds])];
-    sessionStorage.setItem('ats_notif_dismissed', JSON.stringify(merged));
+    if (user) sessionStorage.setItem(`ats_notif_dismissed_${user.username}`, JSON.stringify(merged));
     setDismissedIds(merged);
     setPopupOpen(false);
   }
 
-  // ── Nav links ──────────────────────────────────────────────────────────────
+  // Hide bottom nav on scroll down, reveal on scroll up
+  const [navHidden, setNavHidden] = useState(false);
+  useEffect(() => {
+    let lastY = window.scrollY;
+    const onScroll = () => {
+      const y = window.scrollY;
+      if (y > lastY + 8)       setNavHidden(true);   // scrolling down
+      else if (y < lastY - 8)  setNavHidden(false);  // scrolling up
+      lastY = y;
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
+  // Also reveal nav when route changes (navigated to new page)
+  useEffect(() => { setNavHidden(false); }, [router.pathname]);
+
+  // ── Bottom nav tabs (role-specific, max 4 items) ──────────────────────────────────────────────────
+  const bottomTabs = () => {
+    if (!user) return [];
+    const tabs = [{ href: '/dashboard', icon: '🏠', label: 'Home' }];
+    if (user.role === ROLES.INSPECTOR || user.role === ROLES.ADMIN)
+      tabs.push({ href: '/inspection/new', icon: '➕', label: 'New' });
+    if (user.role === ROLES.SUPERVISOR || user.role === ROLES.ADMIN)
+      tabs.push({ href: '/supervisor', icon: '📋', label: 'Queue' });
+    if (user.role === ROLES.ADMIN)
+      tabs.push({ href: '/admin/reports', icon: '📊', label: 'Reports' });
+    return tabs;
+  };
+
+  // ── Nav links ──────────────────────────────────────────────────────────────────
   const navLinks = () => {
     if (!user) return [];
     const links = [{ href: '/dashboard', label: '🏠 Dashboard' }];
@@ -74,6 +141,8 @@ export default function AppLayout({ children, title }) {
       links.push({ href: '/admin/lane-config',    label: '⚙️ Lane Config' });
       links.push({ href: '/admin/devices',        label: '📱 Devices' });
       links.push({ href: '/admin/announcements',  label: '📢 Send Notifications' });
+      links.push({ href: '/admin/reports',        label: '📊 Reports' });
+      links.push({ href: '/admin/audit',          label: '🗒️ Audit Log' });
     }
     return links;
   };
@@ -85,7 +154,7 @@ export default function AppLayout({ children, title }) {
         <div className="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between">
           {/* Logo */}
           <div>
-            <div className="font-bold text-base leading-tight">🚗 ATS</div>
+            <div className="font-bold text-base leading-tight">ATS - Konaseema</div>
             <div className="text-xs text-blue-200 leading-tight">Vehicle Fitness Testing</div>
           </div>
 
@@ -93,8 +162,8 @@ export default function AppLayout({ children, title }) {
           <div className="flex items-center gap-2">
             {user && (
               <div className="text-right hidden sm:block mr-1">
-                <div className="text-xs text-blue-200">{user.role}</div>
                 <div className="text-sm font-semibold">{user.name}</div>
+                                <div className="text-xs lowercase text-blue-200">{user.role}</div>
               </div>
             )}
 
@@ -313,8 +382,22 @@ export default function AppLayout({ children, title }) {
         );
       })()}
 
+      {/* Session expiry warning banner */}
+      {sessionWarning && (
+        <div className="bg-orange-500 text-white text-sm px-4 py-2 flex items-center justify-between gap-3 no-print">
+          <span>⏰ Session expires in <strong>{minsLeft} min</strong> — save your work!</span>
+          <button
+            onClick={handleRenew}
+            disabled={renewing}
+            className="shrink-0 bg-white text-orange-600 font-bold text-xs px-3 py-1 rounded-lg active:scale-95 disabled:opacity-60"
+          >
+            {renewing ? 'Renewing...' : 'Stay Logged In'}
+          </button>
+        </div>
+      )}
+
       {/* Page Content */}
-      <main className="flex-1 max-w-2xl mx-auto w-full px-4 py-4">
+      <main className="flex-1 max-w-2xl mx-auto w-full px-4 py-4 pb-24">
         {title && (
           <div className="mb-4">
             <h1 className="page-title">{title}</h1>
@@ -322,6 +405,31 @@ export default function AppLayout({ children, title }) {
         )}
         {children}
       </main>
+
+      {/* Bottom navigation bar — hides on scroll down, reveals on scroll up */}
+      {user && (
+        <nav className={`fixed bottom-0 inset-x-0 bg-white border-t border-gray-200 z-40 no-print transition-transform duration-300 ${
+          navHidden ? 'translate-y-full' : 'translate-y-0'
+        }`}>
+          <div className="max-w-2xl mx-auto flex items-stretch">
+            {bottomTabs().map((tab) => {
+              const active = router.pathname === tab.href || router.pathname.startsWith(tab.href + '/');
+              return (
+                <Link
+                  key={tab.href}
+                  href={tab.href}
+                  className={`flex-1 flex flex-col items-center justify-center py-2 gap-0.5 text-[10px] font-semibold transition-colors
+                    ${ active ? 'text-blue-600 bg-blue-50' : 'text-gray-400 active:bg-gray-50' }`}
+                >
+                  <span className="text-xl leading-none">{tab.icon}</span>
+                  <span>{tab.label}</span>
+                  {active && <span className="absolute bottom-0 w-8 h-0.5 bg-blue-600 rounded-t-full" />}
+                </Link>
+              );
+            })}
+          </div>
+        </nav>
+      )}
     </div>
   );
 }

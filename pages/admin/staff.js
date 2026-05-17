@@ -13,8 +13,10 @@ function AdminStaff() {
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState('');
   const [error, setError] = useState('');
+  const [inspectionCounts, setInspectionCounts] = useState({});
+  const [editingRole, setEditingRole] = useState(null); // staff name being edited
 
-  useEffect(() => { fetchStaff(); }, []);
+  useEffect(() => { fetchStaff(); fetchInspectionCounts(); }, []);
 
   async function fetchStaff() {
     setLoading(true);
@@ -67,6 +69,25 @@ function AdminStaff() {
     }
   }
 
+  async function updateStaffRole(member, role) {
+    setError('');
+    setSuccess('');
+    try {
+      const res = await fetch('/api/admin/staff', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: member.name, role }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to update role');
+      setSuccess(`${member.name} role changed to ${role}`);
+      setEditingRole(null);
+      fetchStaff();
+    } catch (e) {
+      setError(e.message);
+    }
+  }
+
   async function deleteStaff(member) {
     if (!confirm(`Delete staff member "${member.name}"?`)) return;
     setError('');
@@ -84,6 +105,21 @@ function AdminStaff() {
     } catch (e) {
       setError(e.message);
     }
+  }
+
+  async function fetchInspectionCounts() {
+    try {
+      const res  = await fetch('/api/inspection/list');
+      const data = await res.json();
+      const thisMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
+      const counts = {};
+      (data.inspections || []).forEach((insp) => {
+        if (!insp.test_date?.startsWith(thisMonth)) return;
+        if (insp.lane_inspector) counts[insp.lane_inspector] = (counts[insp.lane_inspector] || 0) + 1;
+        if (insp.lane_incharge)  counts[insp.lane_incharge]  = (counts[insp.lane_incharge]  || 0) + 1;
+      });
+      setInspectionCounts(counts);
+    } catch {}
   }
 
   function isActive(member) {
@@ -150,8 +186,36 @@ function AdminStaff() {
                     >
                       {isActive(s) ? 'Active' : 'Inactive'}
                     </span>
+                    {inspectionCounts[s.name] > 0 && (
+                      <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">
+                        {inspectionCounts[s.name]} this month
+                      </span>
+                    )}
                   </div>
-                  <div className="text-xs text-gray-500 mt-0.5">{s.role}</div>
+                  {editingRole === s.name ? (
+                    <div className="flex items-center gap-2 mt-1.5">
+                      <select
+                        defaultValue={s.role}
+                        onChange={(e) => updateStaffRole(s, e.target.value)}
+                        className="text-xs border border-blue-300 rounded-lg px-2 py-1 bg-white focus:outline-none"
+                        autoFocus
+                      >
+                        <option value="Inspector">Lane Inspector</option>
+                        <option value="Incharge">Lane Incharge</option>
+                      </select>
+                      <button onClick={() => setEditingRole(null)} className="text-xs text-gray-400">Cancel</button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-1.5 mt-0.5">
+                      <span className="text-xs text-gray-500">{s.role}</span>
+                      <button
+                        onClick={() => setEditingRole(s.name)}
+                        className="text-xs text-blue-500 underline"
+                      >
+                        change
+                      </button>
+                    </div>
+                  )}
                 </div>
                 <div className="flex gap-2 flex-wrap justify-end">
                   {!isActive(s) && (

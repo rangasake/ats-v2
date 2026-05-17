@@ -33,6 +33,7 @@ function NewInspection() {
   const [docData, setDocData] = useState({});
   const [visualData, setVisualData] = useState({});
   const [laneConfig, setLaneConfig] = useState({ doc_hidden: [], visual_hidden: [] });
+  const [rejectionInfo, setRejectionInfo] = useState(null); // { fail_reason, supervisor_remarks }
 
   // ── Resume draft when ?resume=ID present ──────────────────────────────────
   useEffect(() => {
@@ -99,6 +100,12 @@ function NewInspection() {
       //    Draft → jump to next incomplete step
       if (insp.status === 'Rejected') {
         setStep(1);
+        if (insp.fail_reason || insp.supervisor_remarks) {
+          setRejectionInfo({
+            fail_reason:        insp.fail_reason        || '',
+            supervisor_remarks: insp.supervisor_remarks || '',
+          });
+        }
       } else {
         const savedStep = parseInt(insp.step || '1', 10);
         setStep(Math.min(savedStep + 1, 4));
@@ -373,6 +380,26 @@ function NewInspection() {
         )}
 
         <StepIndicator currentStep={step} steps={STEPS} />
+
+        {/* Rejection reason — shown on every step when re-editing a failed inspection */}
+        {rejectionInfo && (
+          <div className="bg-red-50 border border-red-300 rounded-2xl px-4 py-3 mb-4">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-base">❌</span>
+              <span className="font-bold text-red-800 text-sm">Rejection Reason</span>
+            </div>
+            {rejectionInfo.fail_reason && (
+              <p className="text-sm text-red-700 bg-red-100 rounded-xl px-3 py-2 mb-2 font-medium">
+                {rejectionInfo.fail_reason}
+              </p>
+            )}
+            {rejectionInfo.supervisor_remarks && (
+              <p className="text-xs text-red-600">
+                <span className="font-semibold">Supervisor note:</span> {rejectionInfo.supervisor_remarks}
+              </p>
+            )}
+          </div>
+        )}
 
         {error && (
           <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl px-4 py-3 mb-4">

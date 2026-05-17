@@ -175,6 +175,32 @@ export default function Step3VisualChecklist({ data, laneType, hiddenItems = [],
 
         <div className="border-t border-gray-200 my-4" />
 
+        {/* Quick-fill actions */}
+        <div className="flex gap-2 mb-4">
+          <button
+            type="button"
+            onClick={() => {
+              const updates = {};
+              visibleItems.forEach((item) => { updates[item.id] = 'Yes'; });
+              setForm((prev) => ({ ...prev, ...updates }));
+            }}
+            className="flex-1 py-2.5 rounded-xl border-2 border-green-400 bg-green-50 text-green-700 font-semibold text-sm active:scale-95 transition-all"
+          >
+            ✅ Mark All as Pass
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              const updates = {};
+              visibleItems.forEach((item) => { updates[item.id] = ''; });
+              setForm((prev) => ({ ...prev, ...updates }));
+            }}
+            className="px-4 py-2.5 rounded-xl border-2 border-gray-300 bg-gray-50 text-gray-500 font-semibold text-sm active:scale-95 transition-all"
+          >
+            Clear
+          </button>
+        </div>
+
         {/* Existing visual checklist items */}
         {categories.map((cat) => {
           const catItems = visibleItems.filter((i) => i.category === cat);
