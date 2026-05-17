@@ -97,7 +97,7 @@ function SupervisorQueue() {
               key={s}
               onClick={() => setFilter(s)}
               className={`px-4 py-2 rounded-xl text-sm font-semibold whitespace-nowrap
-                ${filter === s ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 border border-gray-200'}`}
+                ${filter === s ? 'bg-blue-800 text-white' : 'bg-white text-gray-600 border border-gray-200'}`}
             >
               {s}
             </button>

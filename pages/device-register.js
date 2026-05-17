@@ -123,7 +123,8 @@ export default function DeviceRegister() {
             <button
               type="submit"
               disabled={status === 'checking' || !token.trim()}
-              className="w-full bg-blue-600 text-white font-bold py-3 px-6 rounded-xl disabled:opacity-50 active:scale-95 transition-all"
+              className="w-full text-white font-bold py-3 px-6 rounded-xl disabled:opacity-50 active:scale-95 transition-all"
+              style={{ background: 'linear-gradient(135deg, #2563eb, #1e3a8a)' }}
             >
               {status === 'checking' ? '⏳ Verifying...' : '🔐 Register Device'}
             </button>

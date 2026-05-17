@@ -128,7 +128,7 @@ function AdminUsers() {
           {users.length < 10 && (
             <button
               onClick={() => setShowForm(!showForm)}
-              className="bg-blue-600 text-white px-4 py-2 rounded-xl text-sm font-semibold active:scale-95"
+              className="bg-blue-800 text-white px-4 py-2 rounded-xl text-sm font-semibold active:scale-95"
             >
               {showForm ? 'Cancel' : '+ Add User'}
             </button>
@@ -238,7 +238,7 @@ function AdminUsers() {
                     <button
                       type="submit"
                       disabled={resetSaving || !resetPw.trim()}
-                      className="px-4 py-2 rounded-xl text-xs font-bold bg-blue-600 text-white disabled:opacity-50"
+                      className="px-4 py-2 rounded-xl text-xs font-bold bg-blue-800 text-white disabled:opacity-50"
                     >
                       {resetSaving ? '...' : 'Save'}
                     </button>

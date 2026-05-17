@@ -96,7 +96,7 @@ function AdminAnnouncements() {
                     onClick={() => setTargetRole(opt.value)}
                     className={`px-3 py-1.5 rounded-xl text-sm font-semibold border transition-colors
                       ${targetRole === opt.value
-                        ? 'bg-blue-600 text-white border-blue-600'
+                        ? 'bg-blue-800 text-white border-blue-800'
                         : 'bg-white text-gray-600 border-gray-200'}`}
                   >
                     {opt.label}

@@ -98,7 +98,7 @@ function AdminDevices() {
           <p className="text-sm text-gray-500">{devices.length} total devices</p>
           <button
             onClick={() => { setShowForm(!showForm); setError(''); setNewToken(null); }}
-            className="bg-blue-600 text-white px-4 py-2 rounded-xl text-sm font-semibold active:scale-95"
+            className="bg-blue-800 text-white px-4 py-2 rounded-xl text-sm font-semibold active:scale-95"
           >
             {showForm ? 'Cancel' : '+ New Device'}
           </button>

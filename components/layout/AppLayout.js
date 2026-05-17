@@ -150,7 +150,7 @@ export default function AppLayout({ children, title }) {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       {/* Top Nav */}
-      <nav className="bg-blue-700 text-white shadow-lg sticky top-0 z-40 no-print">
+      <nav className="text-white shadow-lg sticky top-0 z-40 no-print" style={{ background: 'linear-gradient(135deg, #1e3a8a, #1e2d72)' }}>
         <div className="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between">
           {/* Logo */}
           <div>
@@ -171,7 +171,7 @@ export default function AppLayout({ children, title }) {
             {user && (
               <button
                 onClick={() => { setPanelOpen(!panelOpen); setMenuOpen(false); }}
-                className="relative p-2 rounded-lg hover:bg-blue-600 transition-colors"
+                className="relative p-2 rounded-lg hover:bg-blue-900 transition-colors"
                 aria-label="Notifications"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -188,7 +188,7 @@ export default function AppLayout({ children, title }) {
             {/* Hamburger */}
             <button
               onClick={() => { setMenuOpen(!menuOpen); setPanelOpen(false); }}
-              className="p-2 rounded-lg hover:bg-blue-600 transition-colors"
+              className="p-2 rounded-lg hover:bg-blue-900 transition-colors"
             >
               <div className="w-5 h-0.5 bg-white mb-1"></div>
               <div className="w-5 h-0.5 bg-white mb-1"></div>
@@ -201,9 +201,9 @@ export default function AppLayout({ children, title }) {
         {menuOpen && (
           <div className="absolute right-4 top-14 bg-white rounded-2xl shadow-xl border border-gray-100 w-56 z-50 overflow-hidden">
             {user && (
-              <div className="px-4 py-3 bg-blue-50 border-b border-gray-100">
-                <div className="font-semibold text-gray-800">{user.name}</div>
-                <div className="text-xs text-blue-600 font-medium">{user.role}</div>
+              <div className="px-4 py-3 bg-blue-900 border-b border-gray-100">
+                <div className="font-semibold text-white">{user.name}</div>
+                <div className="text-xs text-blue-200 font-medium">{user.role}</div>
               </div>
             )}
             {navLinks().map((link) => (
@@ -231,13 +231,13 @@ export default function AppLayout({ children, title }) {
             className="absolute right-4 top-14 bg-white rounded-2xl shadow-xl border border-gray-100 w-80 z-50 overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="px-4 py-3 bg-indigo-50 border-b border-gray-100 flex items-center justify-between">
-              <span className="font-bold text-indigo-800 text-sm">🔔 Notifications</span>
+            <div className="px-4 py-3 bg-blue-900 border-b border-gray-100 flex items-center justify-between">
+              <span className="font-bold text-white text-sm">🔔 Notifications</span>
               <div className="flex items-center gap-2">
                 {unseenCount > 0 && (
                   <button
                     onClick={(e) => { e.stopPropagation(); markAllSeen(); setPanelOpen(false); }}
-                    className="text-xs font-semibold text-white bg-indigo-500 hover:bg-indigo-600 px-2 py-1 rounded-lg"
+                    className="text-xs font-semibold text-white bg-blue-600 hover:bg-blue-500 px-2 py-1 rounded-lg"
                   >
                     ✓ Mark as read
                   </button>
@@ -326,12 +326,12 @@ export default function AppLayout({ children, title }) {
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9998, padding: '1rem' }}>
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
             {/* Header */}
-            <div className="bg-indigo-600 px-5 py-4 flex items-center justify-between">
+            <div style={{ background: 'linear-gradient(135deg, #1e3a8a, #1e2d72)' }} className="px-5 py-4 flex items-center justify-between">
               <div className="flex items-center gap-2 text-white">
                 <span className="text-xl">{headingIcon}</span>
                 <span className="font-bold">{headingText}</span>
               </div>
-              <button onClick={markAllSeen} className="text-indigo-200 hover:text-white text-xl leading-none">✕</button>
+              <button onClick={markAllSeen} className="text-blue-200 hover:text-white text-xl leading-none">✕</button>
             </div>
 
             {/* Body */}
@@ -354,11 +354,11 @@ export default function AppLayout({ children, title }) {
                   }
                   return (
                     <Link key={n.id} href={`/inspection/${n.inspection_id}`} onClick={markAllSeen}>
-                      <div className="bg-indigo-50 border border-indigo-100 rounded-xl px-3 py-2 flex items-center justify-between gap-2">
+                      <div className="bg-blue-50 border border-blue-100 rounded-xl px-3 py-2 flex items-center justify-between gap-2">
                         <div>
                           <span className="font-bold text-gray-800 text-sm">{n.vehicle_number}</span>
                           <p className="text-xs text-gray-500 mt-0.5">
-                            by <strong className="text-indigo-700">{n.inspector_name}</strong>
+                            by <strong className="text-blue-800">{n.inspector_name}</strong>
                           </p>
                         </div>
                         <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${STATUS_COLORS[n.status] || 'bg-gray-100 text-gray-500'}`}>
@@ -419,11 +419,11 @@ export default function AppLayout({ children, title }) {
                   key={tab.href}
                   href={tab.href}
                   className={`flex-1 flex flex-col items-center justify-center py-2 gap-0.5 text-[10px] font-semibold transition-colors
-                    ${ active ? 'text-blue-600 bg-blue-50' : 'text-gray-400 active:bg-gray-50' }`}
+                    ${ active ? 'text-blue-800 bg-blue-50' : 'text-gray-400 active:bg-gray-50' }`}
                 >
                   <span className="text-xl leading-none">{tab.icon}</span>
                   <span>{tab.label}</span>
-                  {active && <span className="absolute bottom-0 w-8 h-0.5 bg-blue-600 rounded-t-full" />}
+                  {active && <span className="absolute bottom-0 w-8 h-0.5 bg-blue-800 rounded-t-full" />}
                 </Link>
               );
             })}

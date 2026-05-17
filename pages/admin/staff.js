@@ -135,7 +135,7 @@ function AdminStaff() {
           <p className="text-sm text-gray-500">{staff.length} staff members</p>
           <button
             onClick={() => setShowForm(!showForm)}
-            className="bg-blue-600 text-white px-4 py-2 rounded-xl text-sm font-semibold"
+            className="bg-blue-800 text-white px-4 py-2 rounded-xl text-sm font-semibold"
           >
             {showForm ? 'Cancel' : '+ Add Staff'}
           </button>

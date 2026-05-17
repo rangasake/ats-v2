@@ -77,7 +77,7 @@ function Dashboard() {
       <AppLayout title="Dashboard">
         {/* Pull-to-refresh indicator */}
         {(pullState === 'pulling' || pullState === 'refreshing') && (
-          <div className="flex items-center justify-center gap-2 py-2 mb-2 text-blue-600 text-sm font-semibold">
+          <div className="flex items-center justify-center gap-2 py-2 mb-2 text-blue-800 text-sm font-semibold">
             <span className={pullState === 'refreshing' ? 'animate-spin' : ''}>🔄</span>
             {pullState === 'refreshing' ? 'Refreshing...' : 'Release to refresh'}
           </div>
@@ -85,7 +85,7 @@ function Dashboard() {
         {/* Quick Actions */}
         {(user?.role === ROLES.INSPECTOR || user?.role === ROLES.ADMIN) && (
           <Link href="/inspection/new">
-            <div className="bg-blue-600 text-white rounded-2xl p-4 mb-3 flex items-center gap-3 active:scale-98 transition-transform shadow-lg">
+            <div className="text-white rounded-2xl p-4 mb-3 flex items-center gap-3 active:scale-98 transition-transform shadow-lg" style={{ background: 'linear-gradient(135deg, #2563eb, #1e3a8a)' }}>
               <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center text-2xl">➕</div>
               <div>
                 <div className="font-bold text-base">New Inspection</div>
@@ -112,22 +112,24 @@ function Dashboard() {
         )}
 
         {/* Stats — clickable filters */}
-        <div className="grid grid-cols-4 gap-3 mb-4">
+        <div className="grid grid-cols-4 gap-2 mb-4">
           {Object.entries(counts).map(([status, count]) => {
             const icons  = { Draft: '✏️', Pending: '⏳', Approved: '✅', Rejected: '❌' };
             const colors = { Draft: 'bg-gray-50', Pending: 'bg-yellow-50', Approved: 'bg-green-50', Rejected: 'bg-red-50' };
-            const rings  = { Draft: 'ring-gray-400', Pending: 'ring-yellow-400', Approved: 'ring-green-500', Rejected: 'ring-red-400' };
+            const rings  = { Draft: 'ring-gray-300', Pending: 'ring-yellow-400', Approved: 'ring-green-500', Rejected: 'ring-red-400' };
+            const textColors = { Draft: 'text-gray-700', Pending: 'text-yellow-700', Approved: 'text-green-700', Rejected: 'text-red-600' };
             const isActive = filter === status;
             return (
               <button
                 key={status}
                 onClick={() => setFilter(isActive ? 'All' : status)}
-                className={`${colors[status]} rounded-2xl p-4 border text-left transition-all active:scale-95 ${
+                className={`${colors[status]} rounded-2xl py-3 px-1 border text-center transition-all active:scale-95 ${
                   isActive ? `border-transparent ring-2 ${rings[status]} shadow-md` : 'border-gray-100'
                 }`}
               >
-                <div className="text-2xl font-bold text-gray-800">{count}</div>
-                <div className="text-xs text-gray-600 mt-1">{icons[status]} {status}</div>
+                <div className="text-lg leading-none mb-1">{icons[status]}</div>
+                <div className={`text-xl font-bold leading-tight ${textColors[status]}`}>{count}</div>
+                <div className="text-[10px] font-semibold text-gray-500 mt-0.5 leading-tight">{status}</div>
               </button>
             );
           })}
@@ -151,11 +153,11 @@ function Dashboard() {
           <button
             onClick={() => setShowDateRange((v) => !v)}
             className={`flex items-center gap-1.5 px-3 py-2.5 rounded-xl border text-sm font-semibold transition-all ${
-              hasDateFilter ? 'border-blue-500 bg-blue-50 text-blue-700' : showDateRange ? 'border-blue-300 bg-blue-50 text-blue-600' : 'border-gray-200 bg-white text-gray-600'
+              hasDateFilter ? 'border-blue-700 bg-blue-50 text-blue-800' : showDateRange ? 'border-blue-400 bg-blue-50 text-blue-700' : 'border-gray-200 bg-white text-gray-600'
             }`}
           >
             📅
-            {hasDateFilter && <span className="w-2 h-2 rounded-full bg-blue-600 inline-block" />}
+            {hasDateFilter && <span className="w-2 h-2 rounded-full bg-blue-800 inline-block" />}
           </button>
         </div>
 
@@ -207,7 +209,7 @@ function Dashboard() {
           </div>
         )}
         {hasDateFilter && (
-          <div className="text-xs text-blue-600 bg-blue-50 rounded-lg px-3 py-1.5 mb-3">
+          <div className="text-xs text-blue-800 bg-blue-50 rounded-lg px-3 py-1.5 mb-3">
             📅 {dateFrom || '…'} → {dateTo || 'today'}{filter !== 'All' ? ` · ${filter}` : ''}
           </div>
         )}
