@@ -9,7 +9,7 @@ async function handler(req, res) {
   if (!vehicle_number) return res.status(400).json({ error: 'Vehicle number required' });
 
   try {
-    const vehicle = await findRow(SHEETS.VEHICLES, 'vehicle_number', vehicle_number.trim().toUpperCase());
+    const vehicle = await findRow(req.user.orgId, SHEETS.VEHICLES, 'vehicle_number', vehicle_number.trim().toUpperCase());
     if (!vehicle) return res.status(404).json({ found: false });
     return res.status(200).json({ found: true, vehicle });
   } catch (err) {

@@ -10,7 +10,7 @@ async function handler(req, res) {
   const now = new Date().toISOString();
 
   try {
-    await ensureHeaders(SHEETS.INSPECTIONS, ['lat_long']);
+    await ensureHeaders(req.user.orgId, SHEETS.INSPECTIONS, ['lat_long']);
 
     if (String(step) === '3' && !stepData.lat_long?.trim() && stepData.lat_long !== undefined) {
       return res.status(400).json({ error: 'Vehicle location is required' });
@@ -18,7 +18,7 @@ async function handler(req, res) {
 
     if (inspection_id) {
       // Update existing
-      const existing = await findRow(SHEETS.INSPECTIONS, 'inspection_id', inspection_id);
+      const existing = await findRow(req.user.orgId, SHEETS.INSPECTIONS, 'inspection_id', inspection_id);
       if (!existing) return res.status(404).json({ error: 'Inspection not found' });
       if (existing.inspector_username !== req.user.username && req.user.role !== 'Admin') {
         return res.status(403).json({ error: 'Not authorized' });
@@ -30,7 +30,7 @@ async function handler(req, res) {
         ...(step !== undefined ? { step: String(step) } : {}),
         updated_at: now,
       };
-      const ok = await updateRow(SHEETS.INSPECTIONS, 'inspection_id', inspection_id, updates);
+      const ok = await updateRow(req.user.orgId, SHEETS.INSPECTIONS, 'inspection_id', inspection_id, updates);
       if (!ok) return res.status(404).json({ error: 'Inspection not found' });
       return res.status(200).json({ success: true, inspection_id });
     } else {
@@ -45,7 +45,7 @@ async function handler(req, res) {
         created_at: now,
         updated_at: now,
       };
-      await appendRow(SHEETS.INSPECTIONS, row);
+      await appendRow(req.user.orgId, SHEETS.INSPECTIONS, row);
       return res.status(200).json({ success: true, inspection_id: newId });
     }
   } catch (err) {

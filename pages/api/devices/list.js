@@ -6,7 +6,7 @@ import { SHEETS } from '../../../lib/constants';
 async function handler(req, res) {
   if (req.method !== 'GET') return res.status(405).end();
   try {
-    const devices = await getRows(SHEETS.DEVICES);
+    const devices = await getRows(req.user.orgId, SHEETS.DEVICES);
     // Never expose the raw token to non-admin — mask it
     const safe = devices.map((d) => ({
       ...d,

@@ -18,7 +18,7 @@ async function handler(req, res) {
     }
 
     try {
-      const existing = await getRows(SHEETS.DEVICES);
+      const existing = await getRows(req.user.orgId, SHEETS.DEVICES);
 
       // Check duplicate name
       if (existing.find((d) => d.device_name?.toLowerCase() === device_name.trim().toLowerCase())) {
@@ -28,7 +28,7 @@ async function handler(req, res) {
       const token = generateToken();
       const now   = new Date().toISOString();
 
-      await appendRow(SHEETS.DEVICES, {
+      await appendRow(req.user.orgId, SHEETS.DEVICES, {
         device_name:        device_name.trim(),
         device_description: device_description?.trim() || '',
         token,
@@ -83,7 +83,7 @@ async function handler(req, res) {
           return res.status(400).json({ error: `Unknown action: ${action}` });
       }
 
-      const ok = await updateRow(SHEETS.DEVICES, 'device_name', device_name, updates);
+      const ok = await updateRow(req.user.orgId, SHEETS.DEVICES, 'device_name', device_name, updates);
       if (!ok) return res.status(404).json({ error: 'Device not found' });
 
       return res.status(200).json({

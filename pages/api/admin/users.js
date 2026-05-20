@@ -10,8 +10,8 @@ function isDeleted(row) {
 async function handler(req, res) {
   if (req.method === 'GET') {
     try {
-      await ensureHeaders(SHEETS.USERS, ['username', 'password', 'role', 'name', 'active']);
-      const users = await getRows(SHEETS.USERS);
+      await ensureHeaders(req.user.orgId, SHEETS.USERS, ['username', 'password', 'role', 'name', 'active']);
+      const users = await getRows(req.user.orgId, SHEETS.USERS);
       // never send passwords
       const safe = users
         .filter((u) => !isDeleted(u))
@@ -28,8 +28,8 @@ async function handler(req, res) {
       return res.status(400).json({ error: 'username, password, role required' });
     }
     try {
-      await ensureHeaders(SHEETS.USERS, ['username', 'password', 'role', 'name', 'active']);
-      const existing = await getRows(SHEETS.USERS);
+      await ensureHeaders(req.user.orgId, SHEETS.USERS, ['username', 'password', 'role', 'name', 'active']);
+      const existing = await getRows(req.user.orgId, SHEETS.USERS);
       if (existing.find((u) => u.username === username)) {
         return res.status(409).json({ error: 'Username already exists' });
       }
@@ -38,7 +38,7 @@ async function handler(req, res) {
         return res.status(400).json({ error: 'Maximum 10 users allowed' });
       }
       const hashedPassword = await bcrypt.hash(password, 12);
-      await appendRow(SHEETS.USERS, { username, password: hashedPassword, role, name: name || username, active: active ?? 'true' });
+      await appendRow(req.user.orgId, SHEETS.USERS, { username, password: hashedPassword, role, name: name || username, active: active ?? 'true' });
       return res.status(200).json({ success: true });
     } catch (err) {
       return res.status(500).json({ error: 'Server error' });
@@ -56,12 +56,12 @@ async function handler(req, res) {
       return res.status(400).json({ error: 'You cannot deactivate or delete your own user' });
     }
     try {
-      await ensureHeaders(SHEETS.USERS, ['username', 'password', 'role', 'name', 'active']);
+      await ensureHeaders(req.user.orgId, SHEETS.USERS, ['username', 'password', 'role', 'name', 'active']);
       // Hash the new password if one is being set
       if (updates.password) {
         updates.password = await bcrypt.hash(updates.password, 12);
       }
-      const ok = await updateRow(SHEETS.USERS, 'username', username, updates);
+      const ok = await updateRow(req.user.orgId, SHEETS.USERS, 'username', username, updates);
       if (!ok) return res.status(404).json({ error: 'User not found' });
       return res.status(200).json({ success: true });
     } catch (err) {

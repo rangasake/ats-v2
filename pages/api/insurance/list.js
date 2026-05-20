@@ -5,7 +5,7 @@ import { SHEETS, INSURANCE_COMPANIES } from '../../../lib/constants';
 async function handler(req, res) {
   if (req.method !== 'GET') return res.status(405).end();
   try {
-    const rows = await getRows(SHEETS.INSURANCE_COMPANIES);
+    const rows = await getRows(req.user.orgId, SHEETS.INSURANCE_COMPANIES);
     // Extract the 'name' column from each row
     const sheetCompanies = rows
       .map((r) => (r.name || '').trim())

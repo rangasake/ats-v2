@@ -10,7 +10,7 @@ async function handler(req, res) {
 
     // ── 1. Takeover notifications (Inspector + Admin only) ─────────────────
     if (req.user.role === 'Inspector' || req.user.role === 'Admin') {
-      const inspRows = await getRows(SHEETS.INSPECTIONS);
+      const inspRows = await getRows(req.user.orgId, SHEETS.INSPECTIONS);
       const takeovers = inspRows
         .filter(
           (r) =>
@@ -31,7 +31,7 @@ async function handler(req, res) {
     }
 
     // ── 2. Admin announcements (all roles, filtered by target_role) ────────
-    const annRows = await getRows(SHEETS.ANNOUNCEMENTS);
+    const annRows = await getRows(req.user.orgId, SHEETS.ANNOUNCEMENTS);
     const announcements = annRows
       .filter(
         (r) =>

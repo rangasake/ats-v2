@@ -6,12 +6,12 @@ import { v4 as uuidv4 } from 'uuid';
 const HEADERS = ['id', 'message', 'target_role', 'sent_by', 'created_at'];
 
 async function handler(req, res) {
-  await ensureHeaders(SHEETS.ANNOUNCEMENTS, HEADERS);
+  await ensureHeaders(req.user.orgId, SHEETS.ANNOUNCEMENTS, HEADERS);
 
   // GET — list all announcements (admin management view)
   if (req.method === 'GET') {
     try {
-      const rows = await getRows(SHEETS.ANNOUNCEMENTS);
+      const rows = await getRows(req.user.orgId, SHEETS.ANNOUNCEMENTS);
       const list = rows
         .filter((r) => r.id && r.id !== 'deleted')
         .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
@@ -30,7 +30,7 @@ async function handler(req, res) {
 
     try {
       const id = uuidv4().slice(0, 8).toUpperCase();
-      await appendRow(SHEETS.ANNOUNCEMENTS, {
+      await appendRow(req.user.orgId, SHEETS.ANNOUNCEMENTS, {
         id,
         message:     message.trim(),
         target_role,
@@ -48,7 +48,7 @@ async function handler(req, res) {
     const { id } = req.body;
     if (!id) return res.status(400).json({ error: 'id required' });
     try {
-      await updateRow(SHEETS.ANNOUNCEMENTS, 'id', id, { id: 'deleted' });
+      await updateRow(req.user.orgId, SHEETS.ANNOUNCEMENTS, 'id', id, { id: 'deleted' });
       return res.status(200).json({ success: true });
     } catch (err) {
       return res.status(500).json({ error: 'Server error' });

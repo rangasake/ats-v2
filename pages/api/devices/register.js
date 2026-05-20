@@ -2,6 +2,8 @@
 // Validates a device token and sets an HttpOnly cookie server-side.
 // Called by the device-register page instead of writing cookies from the browser.
 
+import { getOrgByHost } from '../../../lib/orgs';
+
 const TOKEN_COOKIE = 'afts_device_token';
 const COOKIE_MAX_AGE = 60 * 60 * 24 * 365; // 1 year
 
@@ -19,7 +21,10 @@ export default async function handler(req, res) {
     // Verify token against Devices sheet via the existing edge verify endpoint
     const protocol = req.headers['x-forwarded-proto'] || 'http';
     const host = req.headers.host;
-    const verifyRes = await fetch(`${protocol}://${host}/api/devices/verify`, {
+    const org = getOrgByHost(host);
+    const verifyUrl = new URL(`${protocol}://${host}/api/devices/verify`);
+    if (org) verifyUrl.searchParams.set('orgId', org.id);
+    const verifyRes = await fetch(verifyUrl.toString(), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ token: trimmed }),

@@ -7,7 +7,7 @@ async function handler(req, res) {
 
   const { status, username } = req.query;
   try {
-    let rows = await getRows(SHEETS.INSPECTIONS);
+    let rows = await getRows(req.user.orgId, SHEETS.INSPECTIONS);
 
     if (req.user.role === 'Inspector') {
       // Show inspections they own OR originally started (so they see takeover notifications)

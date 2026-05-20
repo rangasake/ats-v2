@@ -1,11 +1,10 @@
 // pages/api/devices/verify.js
 // Called internally by middleware to validate a device token.
-// Uses direct Google Sheets REST API (no googleapis SDK) because
-// Next.js middleware runs on the Edge Runtime which does not support Node.js modules.
+// Org resolution: middleware passes `?orgId=` in the request.
+// Resolves org via lib/orgs (sheet-primary, env-fallback).
 
-export const config = { runtime: 'edge' };
+import { getOrgByIdAsync } from '../../../lib/orgs';
 
-const SHEET_ID   = process.env.GOOGLE_SHEETS_ID;
 const SHEET_NAME = 'Devices';
 
 // ── Get a Google OAuth2 access token from service account JWT ──
@@ -69,8 +68,8 @@ async function getAccessToken() {
 }
 
 // ── Fetch Devices sheet rows ───────────────────────────────────
-async function fetchDevices(accessToken) {
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${encodeURIComponent(SHEET_NAME)}`;
+async function fetchDevices(accessToken, sheetId) {
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${encodeURIComponent(SHEET_NAME)}`;
   const res = await fetch(url, {
     headers: { Authorization: `Bearer ${accessToken}` },
   });
@@ -85,41 +84,42 @@ async function fetchDevices(accessToken) {
   });
 }
 
-// ── Edge handler ───────────────────────────────────────────────
-export default async function handler(req) {
+// ── Node.js handler ────────────────────────────────────────────
+export default async function handler(req, res) {
   if (req.method !== 'POST') {
-    return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405 });
+    return res.status(405).json({ error: 'Method not allowed' });
   }
 
   try {
-    const { token } = await req.json();
+    const { token } = req.body || {};
     if (!token) {
-      return new Response(JSON.stringify({ valid: false, reason: 'No token' }), { status: 200 });
+      return res.status(200).json({ valid: false, reason: 'No token' });
+    }
+
+    // Resolve orgId — middleware sends it as a query parameter
+    const orgId = req.query.orgId || null;
+    const org   = await getOrgByIdAsync(orgId);
+    if (!org || !org.sheetId) {
+      return res.status(200).json({ valid: false, reason: 'Unknown organisation' });
     }
 
     const accessToken = await getAccessToken();
-    const devices     = await fetchDevices(accessToken);
+    const devices     = await fetchDevices(accessToken, org.sheetId);
 
     const device = devices.find((d) => d.token === token);
 
     if (!device) {
-      return new Response(JSON.stringify({ valid: false, reason: 'Token not found' }), { status: 200 });
+      return res.status(200).json({ valid: false, reason: 'Token not found' });
     }
     if (device.status !== 'active') {
-      return new Response(JSON.stringify({ valid: false, reason: `Device ${device.status}`, device_name: device.device_name }), { status: 200 });
+      return res.status(200).json({ valid: false, reason: `Device ${device.status}`, device_name: device.device_name });
     }
 
-    return new Response(
-      JSON.stringify({ valid: true, device_name: device.device_name, device_description: device.device_description }),
-      { status: 200 }
-    );
+    return res.status(200).json({ valid: true, device_name: device.device_name, device_description: device.device_description });
   } catch (err) {
     console.error('Device verify error:', err);
     // On error, FAIL OPEN only in dev — FAIL CLOSED in production
     const isDev = process.env.NODE_ENV === 'development';
-    return new Response(
-      JSON.stringify({ valid: isDev, reason: 'Verification service error', error: err.message }),
-      { status: 200 }
-    );
+    return res.status(200).json({ valid: isDev, reason: 'Verification service error', error: err.message });
   }
 }

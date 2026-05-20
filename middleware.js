@@ -1,16 +1,35 @@
 // middleware.js — Device Token Guard (cookie-based)
 import { NextResponse } from 'next/server';
 
+// ── Inline org resolution (Edge Runtime — no Node.js imports) ─────────────────
+function resolveOrgId(host) {
+  try {
+    const hostname = (host || '').split(':')[0].toLowerCase();
+    // Local dev override
+    if (hostname === 'localhost' || hostname === '127.0.0.1') {
+      return process.env.ORG_DEV_ID || null;
+    }
+    // SuperAdmin domain
+    const saDomain = (process.env.SUPERADMIN_DOMAIN || '').toLowerCase();
+    if (saDomain && hostname === saDomain) return '__super__';
+    // Match against configured orgs
+    const configs = JSON.parse(process.env.ORG_CONFIGS || '[]');
+    const org = configs.find((o) => o.domain === hostname);
+    return org?.id ?? null;
+  } catch { return null; }
+}
+
 // ── Public paths — always allowed, no token needed ───────────────────────────
 const PUBLIC_PATHS = [
-  '/',                      // login page
-  '/device-register',       // token registration
-  '/api/auth/login',        // login API — must be public
-  '/api/auth/logout',       // logout
-  '/api/auth/me',           // session check
-  '/api/devices/verify',    // verify endpoint itself
-  '/api/devices/register',  // server-side device registration (sets HttpOnly cookie)
-  '/api/devices/clear',     // server-side cookie clear
+  '/',                        // login page
+  '/device-register',         // token registration
+  '/api/auth/login',          // login API — must be public
+  '/api/auth/logout',         // logout
+  '/api/auth/me',             // session check
+  '/api/auth/impersonate',    // SuperAdmin org switch
+  '/api/devices/verify',      // verify endpoint itself
+  '/api/devices/register',    // server-side device registration (sets HttpOnly cookie)
+  '/api/devices/clear',       // server-side cookie clear
   '/_next',
   '/favicon.ico',
 ];
@@ -82,7 +101,11 @@ export async function middleware(req) {
     return NextResponse.next();
   }
 
-  // 3. Read token — cookie (SSR) or header (fetch calls)
+  // 3. SuperAdmin portal bypasses device check entirely
+  const orgId = resolveOrgId(host);
+  if (orgId === '__super__') return NextResponse.next();
+
+  // 4. Read token — cookie (SSR) or header (fetch calls)
   const token =
     req.cookies.get(TOKEN_COOKIE)?.value ||
     req.headers.get(TOKEN_HEADER)        ||
@@ -90,7 +113,7 @@ export async function middleware(req) {
 
   const isApi = pathname.startsWith('/api/');
 
-  // 4. No token at all
+  // 4. No token at all — redirect to device registration
   if (!token) {
     if (isApi) {
       return NextResponse.json(
@@ -114,9 +137,12 @@ export async function middleware(req) {
     });
   }
 
-  // 6. Verify against Google Sheets
+  // 6. Verify against Google Sheets — pass orgId so verify.js reads the right sheet
   try {
-    const verifyRes = await fetch(new URL('/api/devices/verify', req.url).toString(), {
+    const verifyUrl = new URL('/api/devices/verify', req.url);
+    if (orgId) verifyUrl.searchParams.set('orgId', orgId);
+
+    const verifyRes = await fetch(verifyUrl.toString(), {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
       body:    JSON.stringify({ token }),

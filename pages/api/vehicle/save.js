@@ -42,11 +42,11 @@ async function handler(req, res) {
   const now = new Date().toISOString();
 
   try {
-    await ensureHeaders(SHEETS.VEHICLES, VEHICLE_HEADERS);
+    await ensureHeaders(req.user.orgId, SHEETS.VEHICLES, VEHICLE_HEADERS);
     const vehiclePayload = buildVehiclePayload(data, vn);
-    const existing = await findRow(SHEETS.VEHICLES, 'vehicle_number', vn);
+    const existing = await findRow(req.user.orgId, SHEETS.VEHICLES, 'vehicle_number', vn);
     if (existing) {
-      const ok = await updateRow(SHEETS.VEHICLES, 'vehicle_number', vn, {
+      const ok = await updateRow(req.user.orgId, SHEETS.VEHICLES, 'vehicle_number', vn, {
         ...vehiclePayload,
         created_at: existing.created_at || now,
         updated_at: now,
@@ -54,7 +54,7 @@ async function handler(req, res) {
       if (!ok) return res.status(404).json({ error: 'Vehicle not found' });
       return res.status(200).json({ success: true, action: 'updated' });
     } else {
-      await appendRow(SHEETS.VEHICLES, {
+      await appendRow(req.user.orgId, SHEETS.VEHICLES, {
         ...vehiclePayload,
         created_at: now,
         updated_at: now,

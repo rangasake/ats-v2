@@ -24,7 +24,7 @@ async function handler(req, res) {
   // We'll do this check after fetching the existing row below.
 
   try {
-    const existing = await findRow(SHEETS.INSPECTIONS, 'inspection_id', inspection_id);
+    const existing = await findRow(req.user.orgId, SHEETS.INSPECTIONS, 'inspection_id', inspection_id);
 
     if (!existing) return res.status(404).json({ error: 'Inspection not found' });
 
@@ -44,14 +44,14 @@ async function handler(req, res) {
       });
     }
 
-    await updateRow(SHEETS.INSPECTIONS, 'inspection_id', inspection_id, {
+    await updateRow(req.user.orgId, SHEETS.INSPECTIONS, 'inspection_id', inspection_id, {
       ...finalData,
       status: INSPECTION_STATUS.PENDING,
       step: '4',
       updated_at: new Date().toISOString(),
     });
 
-    logAudit(req.user.username, 'SUBMIT', inspection_id, existing.vehicle_number || '').catch(() => {});
+    logAudit(req.user.orgId, req.user.username, 'SUBMIT', inspection_id, existing.vehicle_number || '').catch(() => {});
     return res.status(200).json({ success: true });
   } catch (err) {
     console.error('Submit error:', err);

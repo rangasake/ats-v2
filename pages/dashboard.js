@@ -26,6 +26,7 @@ function Dashboard() {
   const statusFilters = ['All', ...Object.values(INSPECTION_STATUS)];
 
   useEffect(() => {
+    if (user?.role === 'SuperAdmin') { router.replace('/superadmin'); return; }
     fetchInspections();
   }, []);
 

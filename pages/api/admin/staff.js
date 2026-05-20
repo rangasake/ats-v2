@@ -9,8 +9,8 @@ function isDeleted(row) {
 async function handler(req, res) {
   if (req.method === 'GET') {
     try {
-      await ensureHeaders(SHEETS.STAFF, ['name', 'role', 'active']);
-      const staff = await getRows(SHEETS.STAFF);
+      await ensureHeaders(req.user.orgId, SHEETS.STAFF, ['name', 'role', 'active']);
+      const staff = await getRows(req.user.orgId, SHEETS.STAFF);
       const visible = staff.filter((s) => !isDeleted(s));
       return res.status(200).json({ staff: visible });
     } catch {
@@ -21,8 +21,8 @@ async function handler(req, res) {
     const { name, role, active } = req.body;
     if (!name) return res.status(400).json({ error: 'Name required' });
     try {
-      await ensureHeaders(SHEETS.STAFF, ['name', 'role', 'active']);
-      await appendRow(SHEETS.STAFF, { name, role: role || 'Inspector', active: active ?? 'true' });
+      await ensureHeaders(req.user.orgId, SHEETS.STAFF, ['name', 'role', 'active']);
+      await appendRow(req.user.orgId, SHEETS.STAFF, { name, role: role || 'Inspector', active: active ?? 'true' });
       return res.status(200).json({ success: true });
     } catch {
       return res.status(500).json({ error: 'Server error' });
@@ -32,8 +32,8 @@ async function handler(req, res) {
     const { name, ...updates } = req.body;
     if (!name) return res.status(400).json({ error: 'Name required' });
     try {
-      await ensureHeaders(SHEETS.STAFF, ['name', 'role', 'active']);
-      const ok = await updateRow(SHEETS.STAFF, 'name', name, updates);
+      await ensureHeaders(req.user.orgId, SHEETS.STAFF, ['name', 'role', 'active']);
+      const ok = await updateRow(req.user.orgId, SHEETS.STAFF, 'name', name, updates);
       if (!ok) return res.status(404).json({ error: 'Staff member not found' });
       return res.status(200).json({ success: true });
     } catch {

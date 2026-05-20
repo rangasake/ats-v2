@@ -8,9 +8,9 @@ async function handler(req, res) {
   if (!inspection_id) return res.status(400).json({ error: 'inspection_id required' });
 
   try {
-    await ensureHeaders(SHEETS.INSPECTIONS, ['originally_started_by']);
+    await ensureHeaders(req.user.orgId, SHEETS.INSPECTIONS, ['originally_started_by']);
 
-    const inspection = await findRow(SHEETS.INSPECTIONS, 'inspection_id', inspection_id);
+    const inspection = await findRow(req.user.orgId, SHEETS.INSPECTIONS, 'inspection_id', inspection_id);
     if (!inspection) return res.status(404).json({ error: 'Inspection not found' });
     if (inspection.status !== INSPECTION_STATUS.DRAFT) {
       return res.status(400).json({ error: 'Can only take over draft inspections' });
@@ -21,7 +21,7 @@ async function handler(req, res) {
       return res.status(200).json({ success: true, inspection_id });
     }
 
-    await updateRow(SHEETS.INSPECTIONS, 'inspection_id', inspection_id, {
+    await updateRow(req.user.orgId, SHEETS.INSPECTIONS, 'inspection_id', inspection_id, {
       inspector_username:    req.user.username,
       inspector_name:        req.user.name || req.user.username,
       // Preserve the original starter; if already taken over before, keep the very first owner

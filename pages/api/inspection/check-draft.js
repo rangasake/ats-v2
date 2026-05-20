@@ -8,7 +8,7 @@ async function handler(req, res) {
   if (!vehicle_number) return res.status(400).json({ error: 'vehicle_number required' });
 
   try {
-    const rows = await getRows(SHEETS.INSPECTIONS);
+    const rows = await getRows(req.user.orgId, SHEETS.INSPECTIONS);
     const drafts = rows
       .filter((r) => r.vehicle_number === vehicle_number && r.status === INSPECTION_STATUS.DRAFT)
       .sort((a, b) => new Date(b.updated_at || 0) - new Date(a.updated_at || 0));

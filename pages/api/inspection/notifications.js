@@ -6,7 +6,7 @@ async function handler(req, res) {
   if (req.method !== 'GET') return res.status(405).end();
 
   try {
-    const rows = await getRows(SHEETS.INSPECTIONS);
+    const rows = await getRows(req.user.orgId, SHEETS.INSPECTIONS);
     // Return inspections this user originally started but someone else took over and progressed
     const notifications = rows
       .filter(

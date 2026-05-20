@@ -8,7 +8,7 @@ async function handler(req, res) {
   if (!id) return res.status(400).json({ error: 'id required' });
 
   try {
-    const inspection = await findRow(SHEETS.INSPECTIONS, 'inspection_id', id);
+    const inspection = await findRow(req.user.orgId, SHEETS.INSPECTIONS, 'inspection_id', id);
     if (!inspection) return res.status(404).json({ error: 'Not found' });
 
     // Inspectors can only see their own

@@ -10,7 +10,7 @@ async function handler(req, res) {
   if (!vehicle_number) return res.status(400).json({ error: 'vehicle_number required' });
 
   try {
-    const rows = await getRows(SHEETS.INSPECTIONS);
+    const rows = await getRows(req.user.orgId, SHEETS.INSPECTIONS);
     const history = rows
       .filter((r) => r.vehicle_number?.trim().toUpperCase() === vehicle_number.trim().toUpperCase())
       .sort((a, b) => new Date(b.test_date || b.created_at || 0) - new Date(a.test_date || a.created_at || 0))

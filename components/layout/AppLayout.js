@@ -1,4 +1,5 @@
 import { useAuth } from '../../lib/useAuth';
+import { useOrg } from '../../lib/OrgContext';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
@@ -15,6 +16,7 @@ const STATUS_COLORS = {
 
 export default function AppLayout({ children, title }) {
   const { user, logout, sessionExpiry, renewSession } = useAuth();
+  const org  = useOrg();
   const router = useRouter();
   const [menuOpen, setMenuOpen]             = useState(false);
   const [sessionWarning, setSessionWarning] = useState(false);
@@ -150,12 +152,12 @@ export default function AppLayout({ children, title }) {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       {/* Top Nav */}
-      <nav className="text-white shadow-lg sticky top-0 z-40 no-print" style={{ background: 'linear-gradient(135deg, #1e3a8a, #1e2d72)' }}>
+      <nav className="text-white shadow-lg sticky top-0 z-40 no-print" style={{ background: 'linear-gradient(135deg, var(--color-primary), color-mix(in srgb, var(--color-primary) 85%, black))' }}>
         <div className="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between">
           {/* Logo */}
           <div>
-            <div className="font-bold text-base leading-tight">ATS - Konaseema</div>
-            <div className="text-xs text-blue-200 leading-tight">Vehicle Fitness Testing</div>
+            <div className="font-bold text-base leading-tight">{org?.logoText || 'AFTS'}</div>
+            <div className="text-xs text-blue-200 leading-tight">{org?.subtitle || 'Vehicle Fitness Testing'}</div>
           </div>
 
           {/* Right controls */}
@@ -201,7 +203,7 @@ export default function AppLayout({ children, title }) {
         {menuOpen && (
           <div className="absolute right-4 top-14 bg-white rounded-2xl shadow-xl border border-gray-100 w-56 z-50 overflow-hidden">
             {user && (
-              <div className="px-4 py-3 bg-blue-900 border-b border-gray-100">
+              <div className="px-4 py-3 border-b border-gray-100" style={{ background: 'var(--color-primary)' }}>
                 <div className="font-semibold text-white">{user.name}</div>
                 <div className="text-xs text-blue-200 font-medium">{user.role}</div>
               </div>
@@ -231,7 +233,8 @@ export default function AppLayout({ children, title }) {
             className="absolute right-4 top-14 bg-white rounded-2xl shadow-xl border border-gray-100 w-80 z-50 overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="px-4 py-3 bg-blue-900 border-b border-gray-100 flex items-center justify-between">
+            <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between"
+              style={{ background: 'var(--color-primary)' }}>
               <span className="font-bold text-white text-sm">🔔 Notifications</span>
               <div className="flex items-center gap-2">
                 {unseenCount > 0 && (
@@ -326,7 +329,7 @@ export default function AppLayout({ children, title }) {
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9998, padding: '1rem' }}>
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
             {/* Header */}
-            <div style={{ background: 'linear-gradient(135deg, #1e3a8a, #1e2d72)' }} className="px-5 py-4 flex items-center justify-between">
+            <div style={{ background: 'linear-gradient(135deg, var(--color-primary), color-mix(in srgb, var(--color-primary) 80%, black))' }} className="px-5 py-4 flex items-center justify-between">
               <div className="flex items-center gap-2 text-white">
                 <span className="text-xl">{headingIcon}</span>
                 <span className="font-bold">{headingText}</span>

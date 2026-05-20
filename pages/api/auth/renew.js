@@ -10,8 +10,8 @@ export default function handler(req, res) {
   const user = verifyToken(token);
   if (!user) return res.status(401).json({ error: 'Session expired — please log in again' });
 
-  // Issue a fresh token with the same payload
-  const newToken = signToken({ username: user.username, name: user.name, role: user.role });
+  // Preserve all fields including orgId
+  const newToken = signToken({ username: user.username, name: user.name, role: user.role, orgId: user.orgId });
   setAuthCookie(res, newToken);
 
   const renewed = verifyToken(newToken);

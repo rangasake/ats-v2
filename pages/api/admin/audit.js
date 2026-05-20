@@ -8,8 +8,8 @@ async function handler(req, res) {
   if (req.method !== 'GET') return res.status(405).end();
 
   try {
-    await ensureHeaders(SHEETS.AUDIT_LOG, AUDIT_HEADERS);
-    const rows = await getRows(SHEETS.AUDIT_LOG);
+    await ensureHeaders(req.user.orgId, SHEETS.AUDIT_LOG, AUDIT_HEADERS);
+    const rows = await getRows(req.user.orgId, SHEETS.AUDIT_LOG);
     // Newest first
     const sorted = [...rows].sort((a, b) =>
       (b.timestamp || '').localeCompare(a.timestamp || '')
