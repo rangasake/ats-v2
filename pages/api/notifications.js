@@ -1,16 +1,18 @@
 import { requireAuth } from '../../lib/auth';
 import { getRows } from '../../lib/googleSheets';
 import { SHEETS, INSPECTION_STATUS } from '../../lib/constants';
+import { getOrgByHost } from '../../lib/orgs';
 
 async function handler(req, res) {
   if (req.method !== 'GET') return res.status(405).end();
 
   try {
+    const org = getOrgByHost(req.headers.host);
     const notifications = [];
 
     // ── 1. Takeover notifications (Inspector + Admin only) ─────────────────
     if (req.user.role === 'Inspector' || req.user.role === 'Admin') {
-      const inspRows = await getRows(SHEETS.INSPECTIONS);
+      const inspRows = await getRows(org.sheetId, SHEETS.INSPECTIONS);
       const takeovers = inspRows
         .filter(
           (r) =>
@@ -31,7 +33,7 @@ async function handler(req, res) {
     }
 
     // ── 2. Admin announcements (all roles, filtered by target_role) ────────
-    const annRows = await getRows(SHEETS.ANNOUNCEMENTS);
+    const annRows = await getRows(org.sheetId, SHEETS.ANNOUNCEMENTS);
     const announcements = annRows
       .filter(
         (r) =>

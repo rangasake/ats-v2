@@ -2,6 +2,7 @@
 import { requireAuth } from '../../../lib/auth';
 import { getRows } from '../../../lib/googleSheets';
 import { SHEETS } from '../../../lib/constants';
+import { getOrgByHost } from '../../../lib/orgs';
 
 async function handler(req, res) {
   if (req.method !== 'GET') return res.status(405).end();
@@ -10,7 +11,8 @@ async function handler(req, res) {
   if (!vehicle_number) return res.status(400).json({ error: 'vehicle_number required' });
 
   try {
-    const rows = await getRows(SHEETS.INSPECTIONS);
+    const org = getOrgByHost(req.headers.host);
+    const rows = await getRows(org.sheetId, SHEETS.INSPECTIONS);
     const history = rows
       .filter((r) => r.vehicle_number?.trim().toUpperCase() === vehicle_number.trim().toUpperCase())
       .sort((a, b) => new Date(b.test_date || b.created_at || 0) - new Date(a.test_date || a.created_at || 0))

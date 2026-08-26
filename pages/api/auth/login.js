@@ -1,6 +1,7 @@
 import { findRow } from '../../../lib/googleSheets';
 import { signToken, setAuthCookie } from '../../../lib/auth';
 import { SHEETS } from '../../../lib/constants';
+import { getOrgByHost } from '../../../lib/orgs';
 import bcrypt from 'bcryptjs';
 
 export default async function handler(req, res) {
@@ -12,7 +13,9 @@ export default async function handler(req, res) {
   }
 
   try {
-    const user = await findRow(SHEETS.USERS, 'username', username.trim());
+    // const user = await findRow(SHEETS.USERS, 'username', username.trim());
+    const org = getOrgByHost(req.headers.host);
+      const user = await findRow(org.sheetId, SHEETS.USERS, 'username', username.trim());
 
     if (!user || user.active?.toLowerCase() !== 'true') {
       return res.status(401).json({ error: 'Invalid credentials' });

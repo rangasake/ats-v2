@@ -2,6 +2,7 @@
 import { requireAuth } from '../../../lib/auth';
 import { getRows, appendRow, updateRow } from '../../../lib/googleSheets';
 import { SHEETS } from '../../../lib/constants';
+import { getOrgByHost } from '../../../lib/orgs';
 import { v4 as uuidv4 } from 'uuid';
 
 // Generate a strong token: AFTS- + 32 hex chars
@@ -10,6 +11,7 @@ function generateToken() {
 }
 
 async function handler(req, res) {
+  const org = getOrgByHost(req.headers.host);
   // ── CREATE new device token ──────────────────────────────────
   if (req.method === 'POST') {
     const { device_name, device_description } = req.body;
@@ -18,7 +20,7 @@ async function handler(req, res) {
     }
 
     try {
-      const existing = await getRows(SHEETS.DEVICES);
+      const existing = await getRows(org.sheetId, SHEETS.DEVICES);
 
       // Check duplicate name
       if (existing.find((d) => d.device_name?.toLowerCase() === device_name.trim().toLowerCase())) {
@@ -28,7 +30,7 @@ async function handler(req, res) {
       const token = generateToken();
       const now   = new Date().toISOString();
 
-      await appendRow(SHEETS.DEVICES, {
+      await appendRow(org.sheetId, SHEETS.DEVICES, {
         device_name:        device_name.trim(),
         device_description: device_description?.trim() || '',
         token,
@@ -83,7 +85,7 @@ async function handler(req, res) {
           return res.status(400).json({ error: `Unknown action: ${action}` });
       }
 
-      const ok = await updateRow(SHEETS.DEVICES, 'device_name', device_name, updates);
+      const ok = await updateRow(org.sheetId, SHEETS.DEVICES, 'device_name', device_name, updates);
       if (!ok) return res.status(404).json({ error: 'Device not found' });
 
       return res.status(200).json({

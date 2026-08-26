@@ -1,12 +1,14 @@
 import { requireAuth } from '../../../lib/auth';
 import { getRows } from '../../../lib/googleSheets';
 import { SHEETS, INSPECTION_STATUS } from '../../../lib/constants';
+import { getOrgByHost } from '../../../lib/orgs';
 
 async function handler(req, res) {
   if (req.method !== 'GET') return res.status(405).end();
 
   try {
-    const rows = await getRows(SHEETS.INSPECTIONS);
+    const org = getOrgByHost(req.headers.host);
+    const rows = await getRows(org.sheetId, SHEETS.INSPECTIONS);
     // Return inspections this user originally started but someone else took over and progressed
     const notifications = rows
       .filter(

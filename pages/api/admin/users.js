@@ -1,6 +1,7 @@
 import { requireAuth } from '../../../lib/auth';
 import { ensureHeaders, getRows, appendRow, updateRow } from '../../../lib/googleSheets';
 import { SHEETS } from '../../../lib/constants';
+import { getOrgByHost } from '../../../lib/orgs';
 import bcrypt from 'bcryptjs';
 
 function isDeleted(row) {
@@ -8,10 +9,11 @@ function isDeleted(row) {
 }
 
 async function handler(req, res) {
+  const org = getOrgByHost(req.headers.host);
   if (req.method === 'GET') {
     try {
-      await ensureHeaders(SHEETS.USERS, ['username', 'password', 'role', 'name', 'active']);
-      const users = await getRows(SHEETS.USERS);
+      await ensureHeaders(org.sheetId, SHEETS.USERS, ['username', 'password', 'role', 'name', 'active']);
+      const users = await getRows(org.sheetId, SHEETS.USERS);
       // never send passwords
       const safe = users
         .filter((u) => !isDeleted(u))
@@ -28,8 +30,8 @@ async function handler(req, res) {
       return res.status(400).json({ error: 'username, password, role required' });
     }
     try {
-      await ensureHeaders(SHEETS.USERS, ['username', 'password', 'role', 'name', 'active']);
-      const existing = await getRows(SHEETS.USERS);
+      await ensureHeaders(org.sheetId, SHEETS.USERS, ['username', 'password', 'role', 'name', 'active']);
+      const existing = await getRows(org.sheetId, SHEETS.USERS);
       if (existing.find((u) => u.username === username)) {
         return res.status(409).json({ error: 'Username already exists' });
       }
@@ -38,7 +40,7 @@ async function handler(req, res) {
         return res.status(400).json({ error: 'Maximum 10 users allowed' });
       }
       const hashedPassword = await bcrypt.hash(password, 12);
-      await appendRow(SHEETS.USERS, { username, password: hashedPassword, role, name: name || username, active: active ?? 'true' });
+      await appendRow(org.sheetId, SHEETS.USERS, { username, password: hashedPassword, role, name: name || username, active: active ?? 'true' });
       return res.status(200).json({ success: true });
     } catch (err) {
       return res.status(500).json({ error: 'Server error' });
@@ -56,12 +58,12 @@ async function handler(req, res) {
       return res.status(400).json({ error: 'You cannot deactivate or delete your own user' });
     }
     try {
-      await ensureHeaders(SHEETS.USERS, ['username', 'password', 'role', 'name', 'active']);
+      await ensureHeaders(org.sheetId, SHEETS.USERS, ['username', 'password', 'role', 'name', 'active']);
       // Hash the new password if one is being set
       if (updates.password) {
         updates.password = await bcrypt.hash(updates.password, 12);
       }
-      const ok = await updateRow(SHEETS.USERS, 'username', username, updates);
+      const ok = await updateRow(org.sheetId, SHEETS.USERS, 'username', username, updates);
       if (!ok) return res.status(404).json({ error: 'User not found' });
       return res.status(200).json({ success: true });
     } catch (err) {

@@ -1,16 +1,18 @@
 import { requireAuth } from '../../../lib/auth';
 import { ensureHeaders, getRows, appendRow, updateRow } from '../../../lib/googleSheets';
 import { SHEETS } from '../../../lib/constants';
+import { getOrgByHost } from '../../../lib/orgs';
 
 function isDeleted(row) {
   return String(row.active || 'true').trim().toLowerCase() === 'deleted';
 }
 
 async function handler(req, res) {
+  const org = getOrgByHost(req.headers.host);
   if (req.method === 'GET') {
     try {
-      await ensureHeaders(SHEETS.STAFF, ['name', 'role', 'active']);
-      const staff = await getRows(SHEETS.STAFF);
+      await ensureHeaders(org.sheetId, SHEETS.STAFF, ['name', 'role', 'active']);
+      const staff = await getRows(org.sheetId, SHEETS.STAFF);
       const visible = staff.filter((s) => !isDeleted(s));
       return res.status(200).json({ staff: visible });
     } catch {
@@ -21,8 +23,8 @@ async function handler(req, res) {
     const { name, role, active } = req.body;
     if (!name) return res.status(400).json({ error: 'Name required' });
     try {
-      await ensureHeaders(SHEETS.STAFF, ['name', 'role', 'active']);
-      await appendRow(SHEETS.STAFF, { name, role: role || 'Inspector', active: active ?? 'true' });
+      await ensureHeaders(org.sheetId, SHEETS.STAFF, ['name', 'role', 'active']);
+      await appendRow(org.sheetId, SHEETS.STAFF, { name, role: role || 'Inspector', active: active ?? 'true' });
       return res.status(200).json({ success: true });
     } catch {
       return res.status(500).json({ error: 'Server error' });
@@ -32,8 +34,8 @@ async function handler(req, res) {
     const { name, ...updates } = req.body;
     if (!name) return res.status(400).json({ error: 'Name required' });
     try {
-      await ensureHeaders(SHEETS.STAFF, ['name', 'role', 'active']);
-      const ok = await updateRow(SHEETS.STAFF, 'name', name, updates);
+      await ensureHeaders(org.sheetId, SHEETS.STAFF, ['name', 'role', 'active']);
+      const ok = await updateRow(org.sheetId, SHEETS.STAFF, 'name', name, updates);
       if (!ok) return res.status(404).json({ error: 'Staff member not found' });
       return res.status(200).json({ success: true });
     } catch {

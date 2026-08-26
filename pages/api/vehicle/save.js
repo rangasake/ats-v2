@@ -1,6 +1,7 @@
 import { requireAuth } from '../../../lib/auth';
 import { ensureHeaders, findRow, appendRow, updateRow } from '../../../lib/googleSheets';
 import { SHEETS } from '../../../lib/constants';
+import { getOrgByHost } from '../../../lib/orgs';
 
 const VEHICLE_FIELDS = [
   'vehicle_number',
@@ -42,11 +43,12 @@ async function handler(req, res) {
   const now = new Date().toISOString();
 
   try {
-    await ensureHeaders(SHEETS.VEHICLES, VEHICLE_HEADERS);
+    const org = getOrgByHost(req.headers.host);
+    await ensureHeaders(org.sheetId, SHEETS.VEHICLES, VEHICLE_HEADERS);
     const vehiclePayload = buildVehiclePayload(data, vn);
-    const existing = await findRow(SHEETS.VEHICLES, 'vehicle_number', vn);
+    const existing = await findRow(org.sheetId, SHEETS.VEHICLES, 'vehicle_number', vn);
     if (existing) {
-      const ok = await updateRow(SHEETS.VEHICLES, 'vehicle_number', vn, {
+      const ok = await updateRow(org.sheetId, SHEETS.VEHICLES, 'vehicle_number', vn, {
         ...vehiclePayload,
         created_at: existing.created_at || now,
         updated_at: now,
@@ -54,7 +56,7 @@ async function handler(req, res) {
       if (!ok) return res.status(404).json({ error: 'Vehicle not found' });
       return res.status(200).json({ success: true, action: 'updated' });
     } else {
-      await appendRow(SHEETS.VEHICLES, {
+      await appendRow(org.sheetId, SHEETS.VEHICLES, {
         ...vehiclePayload,
         created_at: now,
         updated_at: now,

@@ -1,13 +1,15 @@
 import { requireAuth } from '../../../lib/auth';
 import { getRows } from '../../../lib/googleSheets';
 import { SHEETS } from '../../../lib/constants';
+import { getOrgByHost } from '../../../lib/orgs';
 
 async function handler(req, res) {
   if (req.method !== 'GET') return res.status(405).end();
 
   const { status, username } = req.query;
   try {
-    let rows = await getRows(SHEETS.INSPECTIONS);
+    const org = getOrgByHost(req.headers.host);
+    let rows = await getRows(org.sheetId, SHEETS.INSPECTIONS);
 
     if (req.user.role === 'Inspector') {
       // Show inspections they own OR originally started (so they see takeover notifications)

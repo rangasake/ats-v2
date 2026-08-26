@@ -3,11 +3,11 @@ import { findRow, getRows, updateRow, appendRow, ensureHeaders, logAudit } from 
 import { SHEETS, INSPECTION_STATUS } from '../../../lib/constants';
 
 /** Generate ATSK-DDMMYYYY-NNN, incrementing from the highest existing serial for that date */
-async function generateCertId(testDate) {
+async function generateCertId(spreadsheetId, testDate) {
   const d = testDate ? new Date(testDate) : new Date();
   const dateStr = `${String(d.getDate()).padStart(2,'0')}${String(d.getMonth()+1).padStart(2,'0')}${d.getFullYear()}`;
   const prefix = `ATSK-${dateStr}-`;
-  const all = await getRows(SHEETS.INSPECTIONS);
+  const all = await getRows(spreadsheetId, SHEETS.INSPECTIONS);
   const serials = all
     .map((r) => r.cert_id)
     .filter(Boolean)
@@ -24,13 +24,14 @@ async function generateCertId(testDate) {
 }
 
 async function handler(req, res) {
+  const org = getOrgByHost(req.headers.host);
   if (req.method !== 'POST') return res.status(405).end();
 
   const { inspection_id, action, agent_phone, agent_name, booking_id, supervisor_remarks, inspection_result, fail_reason } = req.body;
   if (!inspection_id || !action) return res.status(400).json({ error: 'inspection_id and action required' });
 
   try {
-    const inspection = await findRow(SHEETS.INSPECTIONS, 'inspection_id', inspection_id);
+    const inspection = await findRow(org.sheetId, SHEETS.INSPECTIONS, 'inspection_id', inspection_id);
     if (!inspection) return res.status(404).json({ error: 'Not found' });
 
     const now = new Date().toISOString();
@@ -41,7 +42,7 @@ async function handler(req, res) {
       if (inspection.status !== INSPECTION_STATUS.REJECTED) {
         return res.status(400).json({ error: 'Only rejected inspections can be reopened' });
       }
-      await updateRow(SHEETS.INSPECTIONS, 'inspection_id', inspection_id, {
+      await updateRow(org.sheetId, SHEETS.INSPECTIONS, 'inspection_id', inspection_id, {
         status:             INSPECTION_STATUS.DRAFT,
         supervisor_remarks: supervisor_remarks || '',
         booking_id:         '',   // clear old booking id
@@ -67,23 +68,23 @@ async function handler(req, res) {
 
     // Handle agent
     if (agent_phone) {
-      const existingAgent = await findRow(SHEETS.AGENTS, 'phone', agent_phone);
+      const existingAgent = await findRow(org.sheetId, SHEETS.AGENTS, 'phone', agent_phone);
       if (!existingAgent) {
-        await appendRow(SHEETS.AGENTS, { phone: agent_phone, name: agent_name || '' });
+        await appendRow(org.sheetId, SHEETS.AGENTS, { phone: agent_phone, name: agent_name || '' });
       } else if (agent_name && !existingAgent.name) {
-        await updateRow(SHEETS.AGENTS, 'phone', agent_phone, { name: agent_name });
+        await updateRow(org.sheetId, SHEETS.AGENTS, 'phone', agent_phone, { name: agent_name });
       }
     }
 
-    await ensureHeaders(SHEETS.INSPECTIONS, ['agent_phone', 'agent_name', 'cert_id', 'inspection_result', 'fail_reason']);
+    await ensureHeaders(org.sheetId, SHEETS.INSPECTIONS, ['agent_phone', 'agent_name', 'cert_id', 'inspection_result', 'fail_reason']);
 
     // Generate cert_id only on approval (not rejection)
     let certId = '';
     if (action === 'approve') {
-      certId = await generateCertId(inspection.test_date);
+      certId = await generateCertId(org.sheetId, inspection.test_date);
     }
 
-    await updateRow(SHEETS.INSPECTIONS, 'inspection_id', inspection_id, {
+    await updateRow(org.sheetId, SHEETS.INSPECTIONS, 'inspection_id', inspection_id, {
       status:              newStatus,
       supervisor_username: req.user.username,
       agent_phone:         agent_phone || '',

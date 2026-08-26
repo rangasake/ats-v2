@@ -1,11 +1,13 @@
 import { requireAuth } from '../../../lib/auth';
 import { getRows } from '../../../lib/googleSheets';
 import { SHEETS, INSURANCE_COMPANIES } from '../../../lib/constants';
+import { getOrgByHost } from '../../../lib/orgs';
 
 async function handler(req, res) {
   if (req.method !== 'GET') return res.status(405).end();
   try {
-    const rows = await getRows(SHEETS.INSURANCE_COMPANIES);
+    const org = getOrgByHost(req.headers.host);
+    const rows = await getRows(org.sheetId, SHEETS.INSURANCE_COMPANIES);
     // Extract the 'name' column from each row
     const sheetCompanies = rows
       .map((r) => (r.name || '').trim())

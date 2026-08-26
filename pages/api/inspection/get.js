@@ -1,6 +1,7 @@
 import { requireAuth } from '../../../lib/auth';
 import { findRow } from '../../../lib/googleSheets';
 import { SHEETS } from '../../../lib/constants';
+import { getOrgByHost } from '../../../lib/orgs';
 
 async function handler(req, res) {
   if (req.method !== 'GET') return res.status(405).end();
@@ -8,7 +9,8 @@ async function handler(req, res) {
   if (!id) return res.status(400).json({ error: 'id required' });
 
   try {
-    const inspection = await findRow(SHEETS.INSPECTIONS, 'inspection_id', id);
+    const org = getOrgByHost(req.headers.host);
+    const inspection = await findRow(org.sheetId, SHEETS.INSPECTIONS, 'inspection_id', id);
     if (!inspection) return res.status(404).json({ error: 'Not found' });
 
     // Inspectors can only see their own

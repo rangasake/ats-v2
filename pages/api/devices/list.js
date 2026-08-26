@@ -2,11 +2,13 @@
 import { requireAuth } from '../../../lib/auth';
 import { getRows } from '../../../lib/googleSheets';
 import { SHEETS } from '../../../lib/constants';
+import { getOrgByHost } from '../../../lib/orgs';
 
 async function handler(req, res) {
   if (req.method !== 'GET') return res.status(405).end();
   try {
-    const devices = await getRows(SHEETS.DEVICES);
+    const org = getOrgByHost(req.headers.host);
+    const devices = await getRows(org.sheetId, SHEETS.DEVICES);
     // Never expose the raw token to non-admin — mask it
     const safe = devices.map((d) => ({
       ...d,
