@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../lib/useAuth';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
-
+import { useSelector } from 'react-redux';
 export default function LoginPage() {
   const { user, login, loading } = useAuth();
   const router = useRouter();
@@ -11,7 +11,7 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [showPass, setShowPass] = useState(false);
-
+  const org = useSelector((state) => state.org.org);
   useEffect(() => {
     if (!loading && user) {
       router.push('/dashboard');
@@ -58,7 +58,7 @@ export default function LoginPage() {
               <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
             </svg>
           </div> */}
-          <h1 className="text-3xl font-extrabold tracking-tight">ATS - Konaseema</h1>
+          <h1 className="text-3xl font-extrabold tracking-tight">ATS - {org?.title}</h1>
           <p className="text-blue-300 text-sm mt-1 font-medium">Vehicle Fitness Testing Station</p>
         </div>
 
@@ -132,7 +132,7 @@ export default function LoginPage() {
         </div>
 
         <p className="relative z-10 text-blue-400 text-xs mt-6 text-center">
-          © {new Date().getFullYear()} Aamalapuram Vehicle Fitness Testing Station
+          © {new Date().getFullYear()} {org?.title} Vehicle Fitness Testing Station
         </p>
       </div>
     </>

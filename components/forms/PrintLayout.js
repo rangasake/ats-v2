@@ -1,6 +1,6 @@
 import { forwardRef } from 'react';
 import { VISUAL_CHECKLIST_ITEMS, DOC_CHECKLIST_ITEMS } from '../../lib/constants';
-
+import { useSelector } from 'react-redux';
 function safeParseJSON(str, fallback = {}) {
   try { return JSON.parse(str); } catch { return fallback; }
 }
@@ -330,7 +330,7 @@ function ValBadge({ val }) {
 
 const PrintLayout = forwardRef(function PrintLayout({ inspection, vehicle }, ref) {
   if (!inspection || !vehicle) return null;
-
+    const org = useSelector((state) => state.org.org);
   const visualData = safeParseJSON(inspection.visual_data, {});
   const feedback   = inspection.feedback || '';
 
@@ -360,10 +360,10 @@ const PrintLayout = forwardRef(function PrintLayout({ inspection, vehicle }, ref
       <div style={S.header}>
         {/* Company Info — centered */}
         <div style={S.companyBlock}>
-          <div style={S.companyName}>E S R INFRA SOLUTIONS</div>
-          <div style={S.companySubName}>(ATS Konaseema)</div>
+          <div style={S.companyName}>{org.cname}</div>
+          <div style={S.companySubName}>(ATS {org.title})</div>
           <div style={S.companyAddr}>
-            ATS Centre, SH 14, A Vemavaram, Dr B R Ambedkar Konaseema — 533577
+           {org.adrs}
           </div>
           <span style={S.certBadge}>VEHICLE FITNESS INSPECTION CERTIFICATE</span>
         </div>
@@ -554,7 +554,7 @@ const PrintLayout = forwardRef(function PrintLayout({ inspection, vehicle }, ref
       {/* ── FOOTER ──────────────────────────────────────────────── */}
       <div style={S.footer}>
         Generated: {new Date().toLocaleString('en-IN')} &nbsp;|&nbsp;
-        E S R INFRA SOLUTIONS (ATS Konaseema), A Vemavaram &nbsp;|&nbsp;
+        {org.adrs} &nbsp;|&nbsp;
         This is a computer-generated certificate.
       </div>
 

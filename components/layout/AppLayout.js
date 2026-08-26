@@ -3,6 +3,8 @@ import { useRouter } from 'next/router';
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { ROLES } from '../../lib/constants';
+import { useSelector } from 'react-redux';
+
 
 const WARNING_MS = 10 * 60 * 1000; // warn 10 min before expiry
 
@@ -14,6 +16,7 @@ const STATUS_COLORS = {
 };
 
 export default function AppLayout({ children, title }) {
+  const org = useSelector((state) => state.org.org);
   const { user, logout, sessionExpiry, renewSession } = useAuth();
   const router = useRouter();
   const [menuOpen, setMenuOpen]             = useState(false);
@@ -154,7 +157,7 @@ export default function AppLayout({ children, title }) {
         <div className="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between">
           {/* Logo */}
           <div>
-            <div className="font-bold text-base leading-tight">ATS - Konaseema</div>
+            <div className="font-bold text-base leading-tight">ATS - {org?.title}</div>
             <div className="text-xs text-blue-200 leading-tight">Vehicle Fitness Testing</div>
           </div>
 

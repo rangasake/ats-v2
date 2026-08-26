@@ -220,20 +220,20 @@ function SupervisorReview() {
 
           {agentPhone.length >= 10 && (
             <div className="mb-4">
-              <label className="form-label">Agent Name</label>
+              <label className="form-label">Booking Name</label>
               {agentLookingUp ? (
                 <div className="form-input bg-gray-50 text-gray-400 text-sm">Looking up...</div>
               ) : agentName ? (
                 <div className="form-input bg-green-50 text-green-800 font-semibold">{agentName}</div>
               ) : (
                 <div>
-                  <div className="form-input bg-red-50 text-red-500 text-sm mb-3">No agent found for this number</div>
-                  <p className="text-xs text-gray-400 mb-2">Want to save this number as an agent?</p>
+                  <div className="form-input bg-red-50 text-red-500 text-sm mb-3">No booking name found for this number</div>
+                  <p className="text-xs text-gray-400 mb-2">Want to save this number as an booking phone number?</p>
                   <input
                     type="text"
                     value={newAgentName}
                     onChange={(e) => setNewAgentName(e.target.value)}
-                    placeholder="Enter agent name"
+                    placeholder="Enter booking name"
                     className="form-input mb-2"
                   />
                   <button
@@ -242,7 +242,7 @@ function SupervisorReview() {
                     disabled={savingAgent || !newAgentName.trim()}
                     className="btn-primary w-full text-sm"
                   >
-                    {savingAgent ? 'Saving...' : 'Save Agent'}
+                    {savingAgent ? 'Saving...' : 'Save booking name'}
                   </button>
                 </div>
               )}

@@ -174,8 +174,8 @@ function InspectionDetail() {
         {(inspection.booking_id || inspection.supervisor_remarks) && inspection.status !== INSPECTION_STATUS.DRAFT && (
           <Section title="✅ Supervisor Review">
             <InfoRow label="Status" value={inspection.status} />
-            <InfoRow label="Agent Phone" value={inspection.agent_phone} />
-            <InfoRow label="Agent Name" value={inspection.agent_name} />
+            <InfoRow label="Booking Phone" value={inspection.agent_phone} />
+            <InfoRow label="Booking Name" value={inspection.agent_name} />
             <InfoRow label="Booking ID" value={inspection.booking_id} />
             <InfoRow label="Remarks" value={inspection.supervisor_remarks} />
           </Section>
