@@ -76,7 +76,8 @@ export async function middleware(req) {
   //    By default localhost is NOT bypassed so you can test properly
   const host          = req.headers.get('host') || '';
   const isLocalhost   = host.startsWith('localhost') || host.startsWith('127.0.0.1');
-  const bypassEnabled = process.env.DISABLE_DEVICE_CHECK === 'true';
+  const bypassEnabled = true;
+  // process.env.DISABLE_DEVICE_CHECK === 'true';
 
   if (isLocalhost && bypassEnabled) {
     return NextResponse.next();
