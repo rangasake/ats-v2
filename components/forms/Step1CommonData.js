@@ -45,7 +45,10 @@ export default function Step1CommonData({ data, onSave, loading }) {
     ...data,
     registration_date: normalizeDateForInput(data?.registration_date),
   });
-  const [MANDAL, setMANDAL] = useState({});
+    const [MANDAL, setMANDAL] = useState({
+      mandals: [],
+      mandalRtoMap: {},
+    })
   const [searching, setSearching] = useState(false);
   const [searchDone, setSearchDone] = useState(!!data?.vehicle_number);
   const [errors, setErrors] = useState({});

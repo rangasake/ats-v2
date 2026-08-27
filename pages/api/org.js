@@ -6,7 +6,7 @@ export default function handler(req, res) {
 
   if (!org) {
     return res.status(404).json({
-      error: 'Organization not found',
+      error: 'Organization not configured for this domain',
     });
   }
 

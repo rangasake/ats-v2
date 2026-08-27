@@ -79,10 +79,12 @@ export async function middleware(req) {
   const bypassEnabled = true;
   // process.env.DISABLE_DEVICE_CHECK === 'true';
 
-  if (isLocalhost && bypassEnabled) {
-    return NextResponse.next();
-  }
-
+  // if (isLocalhost && bypassEnabled) {
+  //   return NextResponse.next();
+  // }
+    if (bypassEnabled) {
+      return NextResponse.next();
+    }
   // 3. Read token — cookie (SSR) or header (fetch calls)
   const token =
     req.cookies.get(TOKEN_COOKIE)?.value ||
