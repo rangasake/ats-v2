@@ -45,6 +45,19 @@ function NewInspection() {
       const insp = iData.inspection;
       setInspectionId(insp.inspection_id);
 
+      // Resume is only allowed for the owner (or admin). Non-owners must go
+      // through the takeover popup first so inspector_username is transferred
+      // — otherwise save/submit would 403 with "Not authorized".
+      if (insp.status === 'Draft' && insp.inspector_username && insp.inspector_username !== user?.username && user?.role !== ROLES.ADMIN) {
+        setConflictDraft({
+          inspection_id:      insp.inspection_id,
+          inspector_username: insp.inspector_username,
+          step:               insp.step || '1',
+          updated_at:         insp.updated_at,
+        });
+        return;
+      }
+
       const vRes = await fetch(`/api/vehicle/search?vehicle_number=${insp.vehicle_number}`);
       const vData = await vRes.json();
       if (!vData.found) throw new Error('Vehicle not found for this draft');
@@ -92,13 +105,17 @@ function NewInspection() {
           });
         }
       } else {
-        const savedStep = parseInt(insp.step || '1', 10);
-        if (savedStep <= 2) {
-          setStep(1);
-        } else if (savedStep === 3) {
+        // Decide where to resume based on saved DATA (robust for new 3-step
+        // drafts and legacy drafts created under the old 4-step flow).
+        const docsDone    = Boolean(insp.test_date && insp.test_type);
+        const restoredVis = insp.visual_data ? tryParse(insp.visual_data, {}) : {};
+        const visualDone  = Object.keys(restoredVis).some((k) => restoredVis[k]);
+        if (visualDone) {
+          setStep(3);
+        } else if (docsDone) {
           setStep(2);
         } else {
-          setStep(3);
+          setStep(1);
         }
       }
     } catch (e) {
@@ -136,36 +153,44 @@ function NewInspection() {
       const draftRes = await fetch(`/api/inspection/check-draft?vehicle_number=${encodeURIComponent(vehiclePayload.vehicle_number)}`);
       const draftData = await draftRes.json();
 
+      // Reuse the existing draft if the current user owns it (e.g. resuming
+      // after takeover); otherwise create a brand-new inspection.
+      let targetId;
       if (draftData.draft) {
         const draft = draftData.draft;
-        if (draft.inspector_username === user?.username) {
-          router.push(`/inspection/new?resume=${draft.inspection_id}`);
-          return;
-        } else {
+        if (draft.inspector_username !== user?.username) {
+          // Another inspector's draft — offer takeover before touching it
           setVehicleData(vehiclePayload);
           setDocData(formData);
           setConflictDraft(draft);
           setLoading(false);
           return;
         }
+        // Owned draft. Continue it when we already have it loaded (search
+        // prefill or explicit resume); otherwise open via the resume flow so
+        // the existing sheet data is loaded instead of being overwritten.
+        if (formData.loaded_inspection_id === draft.inspection_id || inspectionId === draft.inspection_id) {
+          targetId = draft.inspection_id;
+        } else {
+          router.push(`/inspection/new?resume=${draft.inspection_id}`);
+          return;
+        }
+      } else {
+        const iRes = await fetch('/api/inspection/save', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ step: 1, vehicle_number: vehiclePayload.vehicle_number }),
+        });
+        const iData = await iRes.json();
+        if (!iData.inspection_id) throw new Error('Failed to create inspection');
+        targetId = iData.inspection_id;
       }
-
-      const iRes = await fetch('/api/inspection/save', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ step: 1, vehicle_number: vehiclePayload.vehicle_number }),
-      });
-      const iData = await iRes.json();
-      if (!iData.inspection_id) throw new Error('Failed to create inspection');
-
-      setInspectionId(iData.inspection_id);
-      setVehicleData(vehiclePayload);
 
       const docRes = await fetch('/api/inspection/save', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          inspection_id: iData.inspection_id,
+          inspection_id: targetId,
           step: 1,
           test_date:         formData.test_date,
           test_type:         formData.test_type,
@@ -187,6 +212,8 @@ function NewInspection() {
         throw new Error(docErr.error || 'Failed to save documents');
       }
 
+      setInspectionId(targetId);
+      setVehicleData(vehiclePayload);
       setDocData(formData);
       setStep(2);
     } catch (e) {
@@ -394,6 +421,8 @@ function NewInspection() {
             data={docData}
             onSave={handleStep1}
             loading={loading}
+            username={user?.username}
+            onExistingDraft={setConflictDraft}
           />
         )}
         {step === 2 && (

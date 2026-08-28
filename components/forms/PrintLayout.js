@@ -329,8 +329,8 @@ function ValBadge({ val }) {
 }
 
 const PrintLayout = forwardRef(function PrintLayout({ inspection, vehicle }, ref) {
-  if (!inspection || !vehicle) return null;
-    const org = useSelector((state) => state.org.org);
+  const org = useSelector((state) => state.org.org);
+  if (!inspection || !vehicle || !org) return null;
   const visualData = safeParseJSON(inspection.visual_data, {});
   const feedback   = inspection.feedback || '';
 

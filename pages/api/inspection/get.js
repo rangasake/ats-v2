@@ -13,10 +13,8 @@ async function handler(req, res) {
     const inspection = await findRow(org.sheetId, SHEETS.INSPECTIONS, 'inspection_id', id);
     if (!inspection) return res.status(404).json({ error: 'Not found' });
 
-    // Inspectors can only see their own
-    if (req.user.role === 'Inspector' && inspection.inspector_username !== req.user.username) {
-      return res.status(403).json({ error: 'Forbidden' });
-    }
+    // Read-only for all authenticated users. Existence of a record is enough;
+    // edit/write protection is enforced in save.js / submit.js / takeover.js.
     return res.status(200).json({ inspection });
   } catch (err) {
     console.error(err);

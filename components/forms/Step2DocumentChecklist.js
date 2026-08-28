@@ -49,11 +49,12 @@ function normalizeDateForInput(value) {
   return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
 }
 
-export default function Step2DocumentChecklist({ data, onSave, loading }) {
+export default function Step2DocumentChecklist({ data, onSave, loading, username, onExistingDraft }) {
   const [vehicleNumber, setVehicleNumber] = useState(data?.vehicle_number || '');
   const [searchDone, setSearchDone] = useState(!!data?.vehicle_number);
   const [searching, setSearching] = useState(false);
   const [noVehicleFound, setNoVehicleFound] = useState(false);
+  const [loadedInspectionId, setLoadedInspectionId] = useState(null);
 
   const [vehicleLane, setVehicleLane] = useState(data?.vehicle_lane || '');
   const [laneType, setLaneType] = useState(data?.lane_type || '');
@@ -136,6 +137,7 @@ export default function Step2DocumentChecklist({ data, onSave, loading }) {
         setLaneType(json.vehicle.lane_type || '');
         setNoVehicleFound(false);
         setSearchDone(true);
+        await checkExistingDraft(vn);
       } else {
         setNoVehicleFound(true);
         setSearchDone(true);
@@ -144,6 +146,53 @@ export default function Step2DocumentChecklist({ data, onSave, loading }) {
       console.error(e);
     } finally {
       setSearching(false);
+    }
+  }
+
+  // If this vehicle already has a draft inspection, surface it: prefill the
+  // form when it belongs to the current inspector, or ask the parent to show
+  // the takeover popup otherwise.
+  async function checkExistingDraft(vn) {
+    try {
+      const draftRes = await fetch(`/api/inspection/check-draft?vehicle_number=${encodeURIComponent(vn)}`);
+      const draftData = await draftRes.json();
+      if (!draftData.draft) return;
+
+      const draft = draftData.draft;
+      if (draft.inspector_username !== username) {
+        if (onExistingDraft) onExistingDraft(draft);
+        return;
+      }
+
+      const iRes = await fetch(`/api/inspection/get?id=${draft.inspection_id}`);
+      const iData = await iRes.json();
+      const insp = iData.inspection;
+      if (!insp) return;
+
+      setLoadedInspectionId(insp.inspection_id);
+      if (insp.vehicle_lane) setVehicleLane(insp.vehicle_lane);
+      if (insp.lane_type) setLaneType(insp.lane_type);
+      setForm((prev) => withNextExpiries({
+        ...prev,
+        vehicle_number:       insp.vehicle_number    || vn,
+        vehicle_lane:         insp.vehicle_lane      || prev.vehicle_lane,
+        lane_type:            insp.lane_type         || prev.lane_type,
+        test_date:            insp.test_date          || '',
+        test_type:            insp.test_type          || '',
+        afms_free_receipt:    insp.afms_free_receipt  || '',
+        rc:                   insp.rc                 || '',
+        last_rc:              insp.last_rc            || '',
+        last_rc_expiry:       insp.last_rc_expiry     || '',
+        puc:                  insp.puc                || '',
+        puc_expiry:           insp.puc_expiry         || '',
+        insurance:            insp.insurance          || '',
+        insurance_expiry:     insp.insurance_expiry   || '',
+        insurance_company:    insp.insurance_company  || '',
+        speed_governor:       insp.speed_governor     || '',
+        vlt_device:           insp.vlt_device         || '',
+      }, data?.registration_date || insp.registration_date));
+    } catch (e) {
+      console.error(e);
     }
   }
 
@@ -165,6 +214,7 @@ export default function Step2DocumentChecklist({ data, onSave, loading }) {
     }
 
     onSave({
+      ...(loadedInspectionId ? { loaded_inspection_id: loadedInspectionId } : {}),
       vehicle_number: vehicleNumber.trim().toUpperCase(),
       vehicle_lane: vehicleLane,
       lane_type: laneType,

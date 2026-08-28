@@ -14,5 +14,7 @@ export default function handler(req, res) {
     id: org.id,
     title: org.title,
     sheetId: org.sheetId,
+    cname: org.cname,
+    adrs: org.adrs,
   });
 }

@@ -124,7 +124,20 @@ function InspectionDetail() {
 
         {/* Vehicle Info */}
         {vehicle && (
-          <Section title="🚗 Vehicle Information">
+          <Section
+            title="🚗 Vehicle Information"
+            action={user?.role === ROLES.SUPERVISOR || user?.role === ROLES.ADMIN ? (
+              <button
+                onClick={() => router.push(`/supervisor/review/${id}`)}
+                className="text-blue-600 hover:text-blue-800 transition-colors p-1"
+                title="Edit vehicle details (Review Inspection)"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" />
+                </svg>
+              </button>
+            ) : null}
+          >
             <InfoRow label="Engine No." value={vehicle.engine_number} />
             <InfoRow label="Chassis No." value={vehicle.chassis_number} />
             <InfoRow label="Meter Reading" value={vehicle.meter_reading ? `${vehicle.meter_reading} KM` : ''} />
@@ -184,7 +197,7 @@ function InspectionDetail() {
         {/* Action Buttons */}
         <div className="space-y-3 mt-4 no-print">
 
-          {/* Continue if draft */}
+          {/* Continue if draft — any inspector can continue; non-owners are routed through the takeover popup in the resume flow */}
           {inspection.status === INSPECTION_STATUS.DRAFT && (user?.role === ROLES.INSPECTOR || user?.role === ROLES.ADMIN) && (
             <button
               onClick={() => router.push(`/inspection/new?resume=${id}`)}
@@ -194,8 +207,8 @@ function InspectionDetail() {
             </button>
           )}
 
-          {/* Inspector: edit & resubmit rejected entry */}
-          {inspection.status === INSPECTION_STATUS.REJECTED && (user?.role === ROLES.INSPECTOR || user?.role === ROLES.ADMIN) && (
+          {/* Inspector: edit & resubmit rejected entry — only the original inspector (or admin), since takeover only applies to drafts */}
+          {inspection.status === INSPECTION_STATUS.REJECTED && (inspection.inspector_username === user?.username || user?.role === ROLES.ADMIN) && (
             <div className="bg-red-50 border border-red-200 rounded-2xl p-4">
               <div className="flex items-center gap-2 mb-2">
                 <span className="text-lg">❌</span>
@@ -229,8 +242,7 @@ function InspectionDetail() {
               📋 Review This Inspection
             </button>
           )}
-  {console.log("org", org)}
-          {/* Print */}
+  {/* Print */}
           {inspection.status === INSPECTION_STATUS.APPROVED && (
             <button onClick={handlePrint} className="btn-primary">
               🖨️ Print Certificate
@@ -251,10 +263,13 @@ function InspectionDetail() {
   );
 }
 
-function Section({ title, children }) {
+function Section({ title, action, children }) {
   return (
     <div className="card mb-4">
-      <h2 className="section-title">{title}</h2>
+      <h2 className="section-title flex items-center justify-between gap-2">
+        <span>{title}</span>
+        {action}
+      </h2>
       <div className="space-y-0">{children}</div>
     </div>
   );
