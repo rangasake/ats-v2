@@ -8,7 +8,7 @@ import PrintLayout from '../../components/forms/PrintLayout';
 import { withAuth } from '../../lib/useAuth';
 import { useAuth } from '../../lib/useAuth';
 import { ROLES, INSPECTION_STATUS, VISUAL_CHECKLIST_ITEMS, DOC_CHECKLIST_ITEMS } from '../../lib/constants';
-
+import { useSelector } from 'react-redux';
 function safeParseJSON(str, fallback = {}) {
   try { return JSON.parse(str); } catch { return fallback; }
 }
@@ -21,7 +21,7 @@ function InspectionDetail() {
   const [vehicle, setVehicle] = useState(null);
   const [loading, setLoading] = useState(true);
   const printRef = useRef();
-
+ const org = useSelector((state) => state.org.org);
   const handlePrint = useReactToPrint({ content: () => printRef.current });
 
   useEffect(() => {
@@ -229,7 +229,7 @@ function InspectionDetail() {
               📋 Review This Inspection
             </button>
           )}
-
+  {console.log("org", org)}
           {/* Print */}
           {inspection.status === INSPECTION_STATUS.APPROVED && (
             <button onClick={handlePrint} className="btn-primary">

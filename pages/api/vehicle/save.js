@@ -69,4 +69,4 @@ async function handler(req, res) {
   }
 }
 
-export default requireAuth(handler, ['Inspector', 'Admin']);
+export default requireAuth(handler, ['Inspector', 'Supervisor', 'Admin']);

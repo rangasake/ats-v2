@@ -128,7 +128,7 @@ async function handler(req, res) {
       {
         ...finalData,
         status: INSPECTION_STATUS.PENDING,
-        step: "4",
+        step: "3",
         updated_at: new Date().toISOString(),
       },
     );
