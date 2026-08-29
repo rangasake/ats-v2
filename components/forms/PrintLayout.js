@@ -361,7 +361,7 @@ const PrintLayout = forwardRef(function PrintLayout({ inspection, vehicle }, ref
         {/* Company Info — centered */}
         <div style={S.companyBlock}>
           <div style={S.companyName}>{org.cname}</div>
-          <div style={S.companySubName}>(ATS {org.title})</div>
+          {/* <div style={S.companySubName}>(ATS {org.title})</div> */}
           <div style={S.companyAddr}>
            {org.adrs}
           </div>
