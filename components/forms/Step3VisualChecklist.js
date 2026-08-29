@@ -86,7 +86,18 @@ export default function Step3VisualChecklist({ data, laneType, hiddenItems = [],
         setLocationLoading(false);
       },
       (error) => {
-        setLocationError(error.message || 'Could not capture location.');
+        const code = error && error.code;
+        let msg;
+        if (code === 1) {
+          msg = 'Location permission was denied. Please enable location for this site in your browser settings and try again.';
+        } else if (code === 2) {
+          msg = 'Your location could not be determined. Check your device GPS/location is turned on and try again.';
+        } else if (code === 3) {
+          msg = 'Location request timed out. Make sure GPS/location is enabled and try again.';
+        } else {
+          msg = error.message || 'Could not capture location.';
+        }
+        setLocationError(msg);
         setLocationLoading(false);
       },
       { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
