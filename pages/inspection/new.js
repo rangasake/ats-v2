@@ -76,19 +76,6 @@ function NewInspection() {
         vehicle_number:    insp.vehicle_number  || vehicle.vehicle_number || '',
         vehicle_lane:      insp.vehicle_lane    || vehicle.vehicle_lane   || '',
         lane_type:         insp.lane_type       || vehicle.lane_type      || '',
-        test_date:         insp.test_date         || '',
-        test_type:         insp.test_type         || '',
-        afms_free_receipt: insp.afms_free_receipt || '',
-        rc:                insp.rc                || '',
-        last_rc:           insp.last_rc           || '',
-        last_rc_expiry:    insp.last_rc_expiry    || '',
-        puc:               insp.puc               || '',
-        puc_expiry:        insp.puc_expiry        || '',
-        insurance:         insp.insurance         || '',
-        insurance_expiry:  insp.insurance_expiry  || '',
-        insurance_company: insp.insurance_company || '',
-        speed_governor:    insp.speed_governor    || '',
-        vlt_device:        insp.vlt_device        || '',
       });
 
       const restoredVisualData = insp.visual_data ? tryParse(insp.visual_data, {}) : {};
@@ -107,12 +94,11 @@ function NewInspection() {
       } else {
         // Decide where to resume based on saved DATA (robust for new 3-step
         // drafts and legacy drafts created under the old 4-step flow).
-        const docsDone    = Boolean(insp.test_date && insp.test_type);
         const restoredVis = insp.visual_data ? tryParse(insp.visual_data, {}) : {};
         const visualDone  = Object.keys(restoredVis).some((k) => restoredVis[k]);
         if (visualDone) {
           setStep(3);
-        } else if (docsDone) {
+        } else if (Number(insp.step) >= 2) {
           setStep(2);
         } else {
           setStep(1);
@@ -192,19 +178,8 @@ function NewInspection() {
         body: JSON.stringify({
           inspection_id: targetId,
           step: 1,
-          test_date:         formData.test_date,
-          test_type:         formData.test_type,
-          afms_free_receipt: formData.afms_free_receipt,
-          rc:                formData.rc,
-          last_rc:           formData.last_rc,
-          last_rc_expiry:    formData.last_rc_expiry,
-          puc:               formData.puc,
-          puc_expiry:        formData.puc_expiry,
-          insurance:         formData.insurance,
-          insurance_expiry:  formData.insurance_expiry,
-          insurance_company: formData.insurance_company,
-          speed_governor:    formData.speed_governor,
-          vlt_device:        formData.vlt_device,
+          vehicle_lane: formData.vehicle_lane,
+          lane_type:    formData.lane_type,
         }),
       });
       if (!docRes.ok) {

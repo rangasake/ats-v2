@@ -50,14 +50,6 @@ async function handler(req, res) {
 
     const REQUIRED_FIELDS = [
       {
-        field: "test_date",
-        label: "Test Date",
-      },
-      {
-        field: "test_type",
-        label: "Test Type",
-      },
-      {
         field: "lane_inspector",
         label: "Lane Inspector",
       },

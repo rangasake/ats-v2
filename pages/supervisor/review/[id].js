@@ -6,7 +6,8 @@ import StatusBadge from '../../../components/ui/StatusBadge';
 import SearchableDropdown from '../../../components/ui/SearchableDropdown';
 import DateInput from '../../../components/ui/DateInput';
 import { withAuth } from '../../../lib/useAuth';
-import { ROLES, VISUAL_CHECKLIST_ITEMS, INSPECTION_STATUS, VEHICLE_LANES, LANE_TYPES } from '../../../lib/constants';
+import { ROLES, VISUAL_CHECKLIST_ITEMS, INSPECTION_STATUS, VEHICLE_LANES, LANE_TYPES, TEST_TYPES, INSURANCE_COMPANIES } from '../../../lib/constants';
+import YesNoField from '../../../components/ui/YesNoField';
 
 function safeParseJSON(str, fallback = {}) {
   try { return JSON.parse(str); } catch { return fallback; }
@@ -20,6 +21,34 @@ function normalizeDateForInput(value) {
   if (!match) return str;
   const [, day, month, year] = match;
   return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+}
+
+// ── Next Expiry computation (mirrors the inspector's old Step 2 behaviour) ──
+const EXPIRY_FIELDS = ['last_rc', 'puc', 'insurance'];
+
+function computeNextExpiry(currentExpiryStr, registrationDateStr) {
+  if (!currentExpiryStr) return '';
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const currentExpiry = new Date(currentExpiryStr);
+  if (isNaN(currentExpiry.getTime())) return '';
+  const baseDate = currentExpiry <= today ? new Date(today) : new Date(currentExpiry);
+  const regDate = registrationDateStr ? new Date(registrationDateStr) : null;
+  const ageYears = regDate && !isNaN(regDate.getTime())
+    ? (today - regDate) / (1000 * 60 * 60 * 24 * 365.25)
+    : 0;
+  const yearsToAdd = ageYears < 8 ? 2 : 1;
+  baseDate.setFullYear(baseDate.getFullYear() + yearsToAdd);
+  return baseDate.toISOString().split('T')[0];
+}
+
+function withNextExpiries(formData, registrationDateStr) {
+  const extras = {};
+  EXPIRY_FIELDS.forEach((id) => {
+    const expiry = formData[`${id}_expiry`];
+    if (expiry) extras[`${id}_next_expiry`] = computeNextExpiry(expiry, registrationDateStr);
+  });
+  return { ...formData, ...extras };
 }
 
 function SupervisorReview() {
@@ -59,12 +88,33 @@ function SupervisorReview() {
     vehicle_lane: '',
     lane_type: '',
   });
+  const [docForm, setDocForm] = useState({
+    test_date: '',
+    test_type: '',
+    afms_free_receipt: '',
+    rc: '',
+    last_rc: '',
+    last_rc_expiry: '',
+    puc: '',
+    puc_expiry: '',
+    insurance: '',
+    insurance_expiry: '',
+    insurance_company: '',
+    speed_governor: '',
+    vlt_device: '',
+  });
+  const [nextExpiries, setNextExpiries] = useState({});
+  const [insuranceCompanies, setInsuranceCompanies] = useState(INSURANCE_COMPANIES);
 
   useEffect(() => {
     if (id) fetchData();
     fetch('/api/config/mandals')
       .then((r) => r.json())
       .then((d) => setMandals(d || {}))
+      .catch(() => {});
+    fetch('/api/insurance/list')
+      .then((r) => r.json())
+      .then((d) => { if (d.companies && d.companies.length > 0) setInsuranceCompanies(d.companies); })
       .catch(() => {});
   }, [id]);
 
@@ -75,6 +125,7 @@ function SupervisorReview() {
       const iData = await iRes.json();
       if (iData.inspection) {
         setInspection(iData.inspection);
+
         const vRes = await fetch(`/api/vehicle/search?vehicle_number=${iData.inspection.vehicle_number}`);
         const vData = await vRes.json();
         if (vData.found) {
@@ -103,6 +154,29 @@ function SupervisorReview() {
             lane_type:    inspection?.lane_type    || '',
           }));
         }
+
+        const regDate = vData?.found ? vData.vehicle.registration_date : '';
+        const fullDocForm = withNextExpiries({
+          test_date:         iData.inspection.test_date         || '',
+          test_type:         iData.inspection.test_type         || '',
+          afms_free_receipt: iData.inspection.afms_free_receipt || '',
+          rc:                iData.inspection.rc                || '',
+          last_rc:           iData.inspection.last_rc           || '',
+          last_rc_expiry:    iData.inspection.last_rc_expiry    || '',
+          puc:               iData.inspection.puc               || '',
+          puc_expiry:        iData.inspection.puc_expiry        || '',
+          insurance:         iData.inspection.insurance         || '',
+          insurance_expiry:  iData.inspection.insurance_expiry  || '',
+          insurance_company: iData.inspection.insurance_company || '',
+          speed_governor:    iData.inspection.speed_governor    || '',
+          vlt_device:        iData.inspection.vlt_device        || '',
+        }, regDate);
+        setDocForm(fullDocForm);
+        setNextExpiries({
+          last_rc_next_expiry:    fullDocForm.last_rc_next_expiry,
+          puc_next_expiry:        fullDocForm.puc_next_expiry,
+          insurance_next_expiry:  fullDocForm.insurance_next_expiry,
+        });
       }
     } catch (e) {
       console.error(e);
@@ -224,6 +298,12 @@ function SupervisorReview() {
       window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
       return;
     }
+    if (action === 'approve' && (!docForm.test_date || !docForm.test_type)) {
+      setError('Test Date and Test Type are required to approve the inspection.');
+      setSubmitting(false);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
 
     await saveVehicleData();
 
@@ -240,6 +320,19 @@ function SupervisorReview() {
           supervisor_remarks: remarks,
           inspection_result:  inspectionResult,
           fail_reason:        inspectionResult === 'Fail' ? failReason.trim() : '',
+          test_date:          docForm.test_date,
+          test_type:          docForm.test_type,
+          afms_free_receipt:  docForm.afms_free_receipt,
+          rc:                 docForm.rc,
+          last_rc:            docForm.last_rc,
+          last_rc_expiry:     docForm.last_rc_expiry,
+          puc:                docForm.puc,
+          puc_expiry:         docForm.puc_expiry,
+          insurance:          docForm.insurance,
+          insurance_expiry:   docForm.insurance_expiry,
+          insurance_company:  docForm.insurance_company,
+          speed_governor:     docForm.speed_governor,
+          vlt_device:         docForm.vlt_device,
         }),
       });
       const data = await res.json();
@@ -254,6 +347,20 @@ function SupervisorReview() {
 
   function updateVehicle(field, value) {
     setVehicleForm((prev) => ({ ...prev, [field]: value }));
+  }
+
+  function setDoc(field, value) {
+    setDocForm((prev) => {
+      const next = { ...prev, [field]: value };
+      if (EXPIRY_FIELDS.some((id) => `${id}_expiry` === field)) {
+        const nextExpiry = computeNextExpiry(value, vehicle?.registration_date);
+        setNextExpiries((p) => ({
+          ...p,
+          [`${field.replace(/_expiry$/, '')}_next_expiry`]: nextExpiry,
+        }));
+      }
+      return next;
+    });
   }
 
   function setOwner(field, value) {
@@ -442,15 +549,87 @@ function SupervisorReview() {
           </div>
         </div>
 
-        {/* Documents */}
+        {/* Documents - Editable */}
         <div className="card mb-4">
-          <h2 className="section-title">📄 Documents</h2>
-          <Row label="Test Type" value={inspection.test_type} />
-          <Row label="AFMS Receipt" value={inspection.afms_free_receipt} />
-          <Row label="RC" value={inspection.rc} />
-          <Row label="PUC / Expiry" value={`${inspection.puc || '-'} / ${inspection.puc_expiry || '-'}`} />
-          <Row label="Insurance / Expiry" value={`${inspection.insurance || '-'} / ${inspection.insurance_expiry || '-'}`} />
-          <Row label="Insurance Co." value={inspection.insurance_company} />
+          <h2 className="section-title">📄 Document Checklist</h2>
+
+          <div className="mb-4">
+            <label className="form-label">Test Date <span className="text-red-500">*</span></label>
+            <DateInput
+              value={docForm.test_date}
+              onChange={(e) => setDoc('test_date', e.target.value)}
+              className="form-input"
+            />
+          </div>
+
+          <div className="mb-4">
+            <label className="form-label">Test Type <span className="text-red-500">*</span></label>
+            <select
+              value={docForm.test_type}
+              onChange={(e) => setDoc('test_type', e.target.value)}
+              className="form-input"
+            >
+              <option value="">Select...</option>
+              {TEST_TYPES.map((o) => <option key={o} value={o}>{o}</option>)}
+            </select>
+          </div>
+
+          <YesNoField
+            label="AFMS Free Receipt"
+            value={docForm.afms_free_receipt}
+            onChange={(v) => setDoc('afms_free_receipt', v)}
+          />
+          <YesNoField
+            label="RC (Registration Certificate)"
+            value={docForm.rc}
+            onChange={(v) => setDoc('rc', v)}
+          />
+          <YesNoField
+            label="Last FC (Fitness Certificate)"
+            value={docForm.last_rc}
+            onChange={(v) => setDoc('last_rc', v)}
+            dateValue={docForm.last_rc_expiry}
+            onDateChange={(v) => setDoc('last_rc_expiry', v)}
+            dateLabel="Expiry Date"
+          />
+          <NextExpiryBadge nextExpiry={nextExpiries.last_rc_next_expiry} />
+          <YesNoField
+            label="PUC (Pollution Under Control)"
+            value={docForm.puc}
+            onChange={(v) => setDoc('puc', v)}
+            dateValue={docForm.puc_expiry}
+            onDateChange={(v) => setDoc('puc_expiry', v)}
+            dateLabel="Expiry Date"
+          />
+          <NextExpiryBadge nextExpiry={nextExpiries.puc_next_expiry} />
+          <YesNoField
+            label="Insurance"
+            value={docForm.insurance}
+            onChange={(v) => setDoc('insurance', v)}
+            dateValue={docForm.insurance_expiry}
+            onDateChange={(v) => setDoc('insurance_expiry', v)}
+            dateLabel="Expiry Date"
+          />
+          <NextExpiryBadge nextExpiry={nextExpiries.insurance_next_expiry} />
+          <div className="mb-4">
+            <SearchableDropdown
+              label="Insurance Company Name"
+              options={insuranceCompanies}
+              value={docForm.insurance_company}
+              onChange={(v) => setDoc('insurance_company', v)}
+              placeholder="Select company..."
+            />
+          </div>
+          <YesNoField
+            label="Speed Governor"
+            value={docForm.speed_governor}
+            onChange={(v) => setDoc('speed_governor', v)}
+          />
+          <YesNoField
+            label="VLT Device"
+            value={docForm.vlt_device}
+            onChange={(v) => setDoc('vlt_device', v)}
+          />
         </div>
 
         {/* Visual */}
@@ -628,6 +807,18 @@ function Row({ label, value }) {
     <div className="flex justify-between items-center py-2 border-b border-gray-50 last:border-0 gap-3">
       <span className="text-sm text-gray-600">{label}</span>
       <span className="text-sm font-semibold text-gray-800 text-right">{value}</span>
+    </div>
+  );
+}
+
+function NextExpiryBadge({ nextExpiry }) {
+  if (!nextExpiry) return null;
+  return (
+    <div className="flex items-center gap-2 -mt-2 mb-4 ml-1">
+      <span className="text-xs text-gray-500">Next Expiry:</span>
+      <span className="text-xs font-semibold text-green-700 bg-green-50 border border-green-200 rounded-lg px-2 py-0.5">
+        {new Date(nextExpiry).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+      </span>
     </div>
   );
 }

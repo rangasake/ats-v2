@@ -85,6 +85,19 @@ async function handler(req, res) {
       supervisor_remarks,
       inspection_result,
       fail_reason,
+      test_date,
+      test_type,
+      afms_free_receipt,
+      rc,
+      last_rc,
+      last_rc_expiry,
+      puc,
+      puc_expiry,
+      insurance,
+      insurance_expiry,
+      insurance_company,
+      speed_governor,
+      vlt_device,
     } = req.body;
 
     if (!inspection_id || !action) {
@@ -222,7 +235,10 @@ async function handler(req, res) {
     let certId = "";
 
     if (action === "approve") {
-      certId = await generateCertId(org.sheetId, inspection.test_date);
+      certId = await generateCertId(
+        org.sheetId,
+        test_date || inspection.test_date,
+      );
     }
 
     // --------------------------------------------------
@@ -250,6 +266,20 @@ async function handler(req, res) {
         inspection_result: inspection_result || "",
 
         fail_reason: inspection_result === "Fail" ? fail_reason || "" : "",
+
+        test_date:         test_date         || "",
+        test_type:         test_type         || "",
+        afms_free_receipt: afms_free_receipt || "",
+        rc:                rc                || "",
+        last_rc:           last_rc           || "",
+        last_rc_expiry:    last_rc_expiry    || "",
+        puc:               puc               || "",
+        puc_expiry:        puc_expiry        || "",
+        insurance:         insurance         || "",
+        insurance_expiry:  insurance_expiry  || "",
+        insurance_company: insurance_company || "",
+        speed_governor:    speed_governor    || "",
+        vlt_device:        vlt_device        || "",
 
         ...(certId ? { cert_id: certId } : {}),
 
