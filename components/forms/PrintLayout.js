@@ -56,24 +56,23 @@ const S = {
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    borderBottom: "3px solid #0e7490",
-    paddingBottom: "7px",
-    marginBottom: "8px",
-    background: "linear-gradient(135deg,#f0f9ff,#ecfdf5)",
-    borderRadius: "6px",
-    padding: "8px 10px 7px",
+    borderBottom: "0px solid #dbe4f0",
+    paddingBottom: "10px",
+    marginBottom: "10px",
+    background: "#fff",
+    padding: "8px 10px 10px",
   },
   logoBox: {
     width: "56px",
     height: "56px",
-    background: "linear-gradient(135deg,#0e7490,#059669)",
+    background: "linear-gradient(150deg,#e8edf7,#d5deee)",
     borderRadius: "10px",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
     fontSize: "26px",
     flexShrink: 0,
-    boxShadow: "0 2px 6px rgba(14,116,144,0.3)",
+    boxShadow: "0 1px 3px rgba(30,58,138,0.12)",
   },
   companyBlock: {
     textAlign: "center",
@@ -81,71 +80,71 @@ const S = {
   },
   companyName: {
     fontSize: "14px",
-    fontWeight: "900",
-    color: "#0e7490",
-    letterSpacing: "0.8px",
+    fontWeight: "700",
+    color: "#22304a",
+    letterSpacing: "0.6px",
     lineHeight: "1.2",
     textTransform: "uppercase",
   },
   companySubName: {
     fontSize: "10px",
-    fontWeight: "700",
-    color: "#059669",
+    fontWeight: "600",
+    color: "#5b6b8c",
     letterSpacing: "0.4px",
     marginTop: "1px",
   },
   companyAddr: {
     fontSize: "8px",
-    color: "#4b5563",
+    color: "#6b7280",
     marginTop: "3px",
     lineHeight: "1.5",
   },
   certBadge: {
-    background: "linear-gradient(90deg,#0e7490,#059669)",
+    background: "#f7f9fc",
     color: "#fff",
     fontSize: "8px",
     fontWeight: "700",
-    padding: "2px 10px",
-    borderRadius: "3px",
-    marginTop: "4px",
+    padding: "3px 14px",
+    borderRadius: "2px",
+    marginTop: "5px",
     display: "inline-block",
-    letterSpacing: "0.8px",
+    letterSpacing: "1.2px",
   },
 
   // ── Certificate ID bar ───────────────────────────────────────
   idBar: {
-    background: "linear-gradient(90deg,#e0f2fe,#d1fae5)",
-    border: "1px solid #7dd3fc",
-    borderRadius: "5px",
-    padding: "5px 10px",
+    background: "#f7f9fc",
+    border: "1px solid #e3e9f2",
+    borderRadius: "4px",
+    padding: "6px 12px",
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: "8px",
+    marginBottom: "10px",
     fontSize: "8.5px",
     flexWrap: "wrap",
     gap: "4px",
   },
-  idItem: { color: "#374151" },
-  idVal: { fontWeight: "800", color: "#0e7490", marginLeft: "4px" },
+  idItem: { color: "#475569" },
+  idVal: { fontWeight: "800", color: "#1e3a8a", marginLeft: "4px" },
   idBox: {
     display: "inline-block",
     minWidth: "60px",
-    borderBottom: "1.5px solid #0e7490",
+    borderBottom: "1.5px solid #93a5c4",
     marginLeft: "4px",
   },
 
   // ── Section header ───────────────────────────────────────────
   secHeader: {
-    background: "linear-gradient(90deg,#0e7490,#0284c7)",
-    color: "#fff",
+    background: "transparent",
+    color: "#1e3a8a",
+    borderBottom: "2px solid #1e3a8a",
     fontSize: "8.5px",
     fontWeight: "700",
-    padding: "3px 8px",
-    borderRadius: "3px",
-    marginBottom: "5px",
-    marginTop: "7px",
-    letterSpacing: "0.3px",
+    padding: "2px 0 3px",
+    marginBottom: "6px",
+    marginTop: "9px",
+    letterSpacing: "0.6px",
     textTransform: "uppercase",
   },
 
@@ -241,7 +240,7 @@ const S = {
     alignItems: "center",
     gap: "6px",
     marginBottom: "8px",
-    background: "#f0f4ff",
+    background: "#eef2ff",
     border: "1px solid #c7d2fe",
     borderRadius: "4px",
     padding: "5px 10px",
@@ -272,9 +271,9 @@ const S = {
   checkboxFilled: {
     width: "11px",
     height: "11px",
-    border: "1.5px solid #16a34a",
+    border: "1.5px solid #3b4f78",
     borderRadius: "2px",
-    background: "#16a34a",
+    background: "#3b4f78",
     display: "inline-flex",
     alignItems: "center",
     justifyContent: "center",
@@ -418,7 +417,7 @@ const PrintLayout = forwardRef(function PrintLayout(
           <div style={S.companyName}>{org.cname}</div>
           {/* <div style={S.companySubName}>(ATS {org.title})</div> */}
           <div style={S.companyAddr}>{org.adrs}</div>
-          <span style={S.certBadge}>
+          <span style={S.companyAddr}>
             VEHICLE FITNESS INSPECTION CERTIFICATE
           </span>
         </div>
@@ -453,7 +452,7 @@ const PrintLayout = forwardRef(function PrintLayout(
         </span>
         <span style={S.idItem}>
           Status:{" "}
-          <strong style={{ ...S.idVal, color: "#059669" }}>
+          <strong style={{ ...S.idVal, color: "#2563eb" }}>
             {inspection.status}
           </strong>
         </span>
@@ -477,7 +476,7 @@ const PrintLayout = forwardRef(function PrintLayout(
                 width: "32%",
                 fontWeight: "800",
                 fontSize: "10px",
-                color: "#0e7490",
+                color: "#2563eb",
               }}
             >
               {vehicle.vehicle_number}
@@ -698,7 +697,7 @@ const PrintLayout = forwardRef(function PrintLayout(
           </span> */}
           <span
             style={{
-              color: "#0e7490",
+              color: "#1e3a8a",
               fontSize: "9px",
               letterSpacing: "0.5px",
             }}
@@ -707,7 +706,7 @@ const PrintLayout = forwardRef(function PrintLayout(
           </span>
           <span style={{ color: "#374151" }}>
             Booking ID:&nbsp;
-            <strong style={{ color: "#0e7490" }}>
+            <strong style={{ color: "#1e3a8a" }}>
               {inspection.booking_id || "—"}
             </strong>
           </span>
