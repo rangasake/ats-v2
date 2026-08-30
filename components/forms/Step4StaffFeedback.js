@@ -62,7 +62,7 @@ export default function Step4StaffFeedback({ data, onSubmit, onBack, loading }) 
       </div>
 
       {/* Feedback */}
-      <div className="card mb-4">
+      <div className="card mb-4 hidden">
         <h2 className="section-title">⭐ Customer Feedback</h2>
         <div className="flex gap-3">
           {['Bad', 'Good', 'Excellent'].map((opt) => {
@@ -127,7 +127,7 @@ export default function Step4StaffFeedback({ data, onSubmit, onBack, loading }) 
             <div className="px-5 py-4 space-y-2">
               <SummaryRow label="Lane Inspector" value={form.lane_inspector} />
               <SummaryRow label="Lane Incharge"  value={form.lane_incharge} />
-              <SummaryRow label="Feedback"       value={form.feedback || '—'} />
+              {/* <SummaryRow label="Feedback"       value={form.feedback || '—'} /> */}
               {form.remarks && <SummaryRow label="Remarks" value={form.remarks} />}
             </div>
             <div className="px-5 pb-5 flex gap-3">

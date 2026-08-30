@@ -188,7 +188,7 @@ function InspectionDetail() {
           <Section title="✅ Supervisor Review">
             <InfoRow label="Status" value={inspection.status} />
             <InfoRow label="Booking Phone" value={inspection.agent_phone} />
-            <InfoRow label="Booking Name" value={inspection.agent_name} />
+            {/* <InfoRow label="Booking Name" value={inspection.agent_name} /> */}
             <InfoRow label="Booking ID" value={inspection.booking_id} />
             <InfoRow label="Remarks" value={inspection.supervisor_remarks} />
           </Section>
