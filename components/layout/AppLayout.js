@@ -145,6 +145,7 @@ export default function AppLayout({ children, title }) {
       links.push({ href: '/admin/devices',        label: '📱 Devices' });
       links.push({ href: '/admin/announcements',  label: '📢 Send Notifications' });
       links.push({ href: '/admin/reports',        label: '📊 Reports' });
+      links.push({ href: '/admin/allowlist',     label: '✅ Allow List' });
       links.push({ href: '/admin/audit',          label: '🗒️ Audit Log' });
     }
     return links;

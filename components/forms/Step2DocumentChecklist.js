@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { VEHICLE_LANES, LANE_TYPES } from '../../lib/constants';
 import SearchableDropdown from '../ui/SearchableDropdown';
 
@@ -8,11 +8,27 @@ export default function Step2DocumentChecklist({ data, onSave, loading, username
   const [searching, setSearching] = useState(false);
   const [noVehicleFound, setNoVehicleFound] = useState(false);
   const [loadedInspectionId, setLoadedInspectionId] = useState(null);
+  const [allowStatus, setAllowStatus] = useState(null); // 'allowed' | 'not-allowed' | null
 
   const [vehicleLane, setVehicleLane] = useState(data?.vehicle_lane || '');
   const [laneType, setLaneType] = useState(data?.lane_type || '');
   const [laneErrors, setLaneErrors] = useState({});
   const [errors, setErrors] = useState({});
+
+  // Check allow list status when resuming (vehicle number prefilled)
+  useEffect(() => {
+    if (data?.vehicle_number) checkAllowList(data.vehicle_number);
+  }, []);
+
+  async function checkAllowList(vn) {
+    try {
+      const res = await fetch(`/api/allowlist/check?vehicle_number=${encodeURIComponent(vn)}`);
+      const json = await res.json();
+      setAllowStatus(json.allowed ? 'allowed' : 'not-allowed');
+    } catch (e) {
+      setAllowStatus(null);
+    }
+  }
 
   async function searchVehicle() {
     const vn = vehicleNumber.trim().toUpperCase();
@@ -21,6 +37,8 @@ export default function Step2DocumentChecklist({ data, onSave, loading, username
     try {
       const res = await fetch(`/api/vehicle/search?vehicle_number=${encodeURIComponent(vn)}`);
       const json = await res.json();
+      setAllowStatus(null);
+      await checkAllowList(vn);
       if (json.found) {
         setVehicleLane(json.vehicle.vehicle_lane || '');
         setLaneType(json.vehicle.lane_type || '');
@@ -94,9 +112,15 @@ export default function Step2DocumentChecklist({ data, onSave, loading, username
       {/* Vehicle Search */}
       <div className="card mb-4">
         <h2 className="section-title">🔍 Vehicle Search</h2>
-        {noVehicleFound && (
+        {/* {noVehicleFound && (
           <p className="text-red-500 text-xs my-2">
-            Vehicle not found in database. Lane details can still be selected below.
+            Vehicle not found in prev. Lane details can still be selected below.
+          </p>
+        )} */}
+          {errors._vehicle && <p className="text-red-500 text-xs mt-1">{errors._vehicle}</p>}
+        {allowStatus && (
+          <p className={`text-xs mb-1 font-semibold ${allowStatus === 'allowed' ? 'text-green-600' : 'text-red-500'}`}>
+            {allowStatus === 'allowed' ? 'Vehicle is in the  list' : 'Vehicle is NOT in the list'}
           </p>
         )}
         <div className="flex gap-2">
@@ -104,9 +128,10 @@ export default function Step2DocumentChecklist({ data, onSave, loading, username
             type="text"
             placeholder="Enter Vehicle Number (e.g. AP02AB1234)"
             value={vehicleNumber}
-            onChange={(e) => { setVehicleNumber(e.target.value.toUpperCase()); setNoVehicleFound(false); setErrors({}); }}
+            onChange={(e) => { setVehicleNumber(e.target.value.toUpperCase()); setNoVehicleFound(false); setErrors({}); setAllowStatus(null); }}
             onKeyDown={(e) => e.key === 'Enter' && searchVehicle()}
             className="form-input uppercase"
+            style={{ border: allowStatus === 'allowed' ? '2px solid #22c55e' : allowStatus === 'not-allowed' ? '2px solid #ef4444' : undefined }}
             disabled={searchDone}
           />
           {!searchDone ? (
@@ -121,14 +146,14 @@ export default function Step2DocumentChecklist({ data, onSave, loading, username
           ) : (
             <button
               type="button"
-              onClick={() => { setSearchDone(false); setVehicleNumber(''); setNoVehicleFound(false); setVehicleLane(''); setLaneType(''); }}
+              onClick={() => { setSearchDone(false); setVehicleNumber(''); setNoVehicleFound(false); setVehicleLane(''); setLaneType(''); setAllowStatus(null); }}
               className="px-4 py-3 bg-gray-200 text-gray-700 rounded-xl font-semibold text-sm whitespace-nowrap active:scale-95"
             >
               Clear
             </button>
           )}
         </div>
-        {errors._vehicle && <p className="text-red-500 text-xs mt-1">{errors._vehicle}</p>}
+      
       </div>
 
       {/* Lane Information */}
