@@ -2,6 +2,7 @@
 
 import { requireAuth } from '../../../lib/auth';
 import { getOrgByHost } from '../../../lib/orgs';
+import { ADMIN_ROLES } from '../../../lib/constants';
 
 const IMAGE_CONFIG = {
   maxSizeBytes: parseInt(
@@ -313,5 +314,5 @@ async function handler(req, res) {
 
 export default requireAuth(
   handler,
-  ['Inspector', 'Admin']
+  ['Inspector', ...ADMIN_ROLES]
 );

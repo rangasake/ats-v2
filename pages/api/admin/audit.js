@@ -1,6 +1,6 @@
 import { requireAuth } from '../../../lib/auth';
 import { getRows, ensureHeaders } from '../../../lib/googleSheets';
-import { SHEETS } from '../../../lib/constants';
+import { SHEETS, ADMIN_ROLES } from '../../../lib/constants';
 import { getOrgByHost } from '../../../lib/orgs';
 
 const AUDIT_HEADERS = ['timestamp', 'actor', 'action', 'inspection_id', 'vehicle_number', 'details'];
@@ -23,4 +23,4 @@ async function handler(req, res) {
   }
 }
 
-export default requireAuth(handler, ['Admin']);
+export default requireAuth(handler, ADMIN_ROLES);

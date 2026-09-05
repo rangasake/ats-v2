@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import AppLayout from '../../components/layout/AppLayout';
 import { withAuth } from '../../lib/useAuth';
-import { ROLES, INSPECTION_STATUS } from '../../lib/constants';
+import { ROLES, ADMIN_ROLES, INSPECTION_STATUS } from '../../lib/constants';
 
 function stat(label, value, color = 'text-gray-800') {
   return (
@@ -147,4 +147,4 @@ function Reports() {
   );
 }
 
-export default withAuth(Reports, [ROLES.ADMIN]);
+export default withAuth(Reports, ADMIN_ROLES);

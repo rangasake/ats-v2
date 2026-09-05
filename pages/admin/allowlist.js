@@ -29,6 +29,7 @@ function mapHeader(h) {
   if (/v_?num|vehicle|veh|reg|plate/.test(x)) return 'v_num';
   if (/(b_?num|booking\s*(num|no|number)|book\s*(num|no|number))/.test(x)) return 'b_num';
   if (/(b_?nam|booking\s*name|book\s*name)/.test(x)) return 'b_nam';
+  if (/amt|amount|value/.test(x)) return 'amt';
   return null;
 }
 
@@ -46,21 +47,25 @@ function parseCSVText(text) {
     let v = '';
     let b = '';
     let bn = '';
+    let amt = '';
     if (hasHeader) {
       const vi = headerMap.indexOf('v_num');
       const bi = headerMap.indexOf('b_num');
       const ni = headerMap.indexOf('b_nam');
+      const ai = headerMap.indexOf('amt');
       v = row[vi];
       if (bi !== -1) b = row[bi];
       if (ni !== -1) bn = row[ni];
+      if (ai !== -1) amt = row[ai];
     } else {
       v = row[0];
       b = row[1];
       bn = row[2];
+      amt = row[3];
     }
     v = (v || '').trim();
     if (!v) continue;
-    out.push({ v_num: v.toUpperCase(), b_num: (b || '').trim(), b_nam: (bn || '').trim() });
+    out.push({ v_num: v.toUpperCase(), b_num: (b || '').trim(), b_nam: (bn || '').trim(), amt: (amt || '').trim() });
   }
   return out;
 }
@@ -74,7 +79,7 @@ function AdminAllowList() {
   const [success, setSuccess]   = useState('');
   const [saving, setSaving]     = useState(false);
   const [deleting, setDeleting] = useState('');
-  const [single, setSingle]     = useState({ v_num: '', b_num: '', b_nam: '' });
+  const [single, setSingle]     = useState({ v_num: '', b_num: '', b_nam: '', amt: '' });
   const fileRef                 = useRef(null);
 
   useEffect(() => { fetchList(); }, []);
@@ -93,8 +98,8 @@ function AdminAllowList() {
     e.preventDefault();
     const v_num = single.v_num.trim().toUpperCase();
     if (!v_num) return;
-    setPending([...pending, { v_num, b_num: single.b_num.trim(), b_nam: single.b_nam.trim() }]);
-    setSingle({ v_num: '', b_num: '', b_nam: '' });
+    setPending([...pending, { v_num, b_num: single.b_num.trim(), b_nam: single.b_nam.trim(), amt: single.amt.trim() }]);
+    setSingle({ v_num: '', b_num: '', b_nam: '', amt: '' });
     setError('');
   }
 
@@ -165,7 +170,7 @@ function AdminAllowList() {
       <Head><title>Allow List - AFTS</title></Head>
       <AppLayout title="✅ Allow List">
         <p className="text-sm text-gray-500 mb-4">
-          Add vehicles allowed to enter the station. Vehicle number, booking number and booking name only.
+          Add vehicles allowed to enter the station. Vehicle number, booking number, booking name and value only.
         </p>
 
         {success && (
@@ -179,7 +184,7 @@ function AdminAllowList() {
         <div className="card mb-4">
           <h2 className="section-title">➕ Add Single Vehicle</h2>
           <form onSubmit={handleSingleAdd}>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 mb-3">
               <div>
                 <label className="form-label">Vehicle Number</label>
                 <input
@@ -207,6 +212,18 @@ function AdminAllowList() {
                   type="text"
                   value={single.b_nam}
                   onChange={(e) => setSingle({ ...single, b_nam: e.target.value })}
+                  className="form-input"
+                  placeholder="Optional"
+                />
+              </div>
+              <div>
+                <label className="form-label">Value</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={single.amt}
+                  onChange={(e) => setSingle({ ...single, amt: e.target.value })}
                   className="form-input"
                   placeholder="Optional"
                 />
@@ -243,13 +260,13 @@ function AdminAllowList() {
             </button>
           </div>
           <p className="text-xs text-gray-500 mb-2">
-            Format: <code className="bg-gray-100 px-1 rounded">vehicle_number, booking_number, booking_name</code> — one row per line. A header row is optional.
+            Format: <code className="bg-gray-100 px-1 rounded">vehicle_number, booking_number, booking_name, value</code> — one row per line. A header row is optional.
           </p>
           <textarea
             value={csvText}
             onChange={(e) => handleCsvText(e.target.value)}
             rows={6}
-            placeholder={'AP37AB1234, BK1001, RAMESH\nAP37AC5678, , SURESH'}
+            placeholder={'AP37AB1234, BK1001, RAMESH, 500\nAP37AC5678, , SURESH, 1000'}
             className="form-input resize-y font-mono text-sm"
           />
         </div>
@@ -271,6 +288,7 @@ function AdminAllowList() {
                     <th className="py-2 pr-2 font-semibold">Vehicle Number</th>
                     <th className="py-2 pr-2 font-semibold">Booking Number</th>
                     <th className="py-2 pr-2 font-semibold">Booking Name</th>
+                    <th className="py-2 pr-2 font-semibold">Value</th>
                     <th className="py-2 font-semibold"></th>
                   </tr>
                 </thead>
@@ -281,6 +299,7 @@ function AdminAllowList() {
                       <td className="py-2 pr-2 font-mono font-semibold text-gray-800">{p.v_num}</td>
                       <td className="py-2 pr-2 text-gray-600">{p.b_num || '—'}</td>
                       <td className="py-2 pr-2 text-gray-600">{p.b_nam || '—'}</td>
+                      <td className="py-2 pr-2 text-gray-600">{p.amt || '—'}</td>
                       <td className="py-2">
                         <button type="button" onClick={() => removePending(i)} className="text-red-400 hover:text-red-600" title="Remove">✕</button>
                       </td>
@@ -310,6 +329,7 @@ function AdminAllowList() {
                     <th className="py-2 pr-2 font-semibold">Vehicle Number</th>
                     <th className="py-2 pr-2 font-semibold">Booking Number</th>
                     <th className="py-2 pr-2 font-semibold">Booking Name</th>
+                    <th className="py-2 pr-2 font-semibold">Value</th>
                     <th className="py-2 pr-2 font-semibold">Added</th>
                     <th className="py-2 font-semibold"></th>
                   </tr>
@@ -320,6 +340,7 @@ function AdminAllowList() {
                       <td className="py-2 pr-2 font-mono font-semibold text-gray-800">{row.v_num}</td>
                       <td className="py-2 pr-2 text-gray-600">{row.b_num || '—'}</td>
                       <td className="py-2 pr-2 text-gray-600">{row.b_nam || '—'}</td>
+                      <td className="py-2 pr-2 text-gray-600">{row.amt || '—'}</td>
                       <td className="py-2 pr-2 text-gray-400">
                         {row.ts ? new Date(row.ts).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' }) : '—'}
                       </td>
@@ -345,4 +366,4 @@ function AdminAllowList() {
   );
 }
 
-export default withAuth(AdminAllowList, [ROLES.ADMIN]);
+export default withAuth(AdminAllowList, [ROLES.SUPER_ADMIN]);

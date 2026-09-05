@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import AppLayout from '../../components/layout/AppLayout';
 import { withAuth } from '../../lib/useAuth';
-import { ROLES } from '../../lib/constants';
+import { ROLES, ADMIN_ROLES } from '../../lib/constants';
 
 const ACTION_STYLES = {
   APPROVE: 'bg-green-100 text-green-700',
@@ -73,4 +73,4 @@ function AuditLog() {
   );
 }
 
-export default withAuth(AuditLog, [ROLES.ADMIN]);
+export default withAuth(AuditLog, ADMIN_ROLES);

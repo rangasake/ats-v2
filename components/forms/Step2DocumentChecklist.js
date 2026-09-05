@@ -15,10 +15,25 @@ export default function Step2DocumentChecklist({ data, onSave, loading, username
   const [laneErrors, setLaneErrors] = useState({});
   const [errors, setErrors] = useState({});
 
+  const [allowVehicles, setAllowVehicles] = useState([]);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+
   // Check allow list status when resuming (vehicle number prefilled)
   useEffect(() => {
     if (data?.vehicle_number) checkAllowList(data.vehicle_number);
   }, []);
+
+  // Load vehicle numbers from the allow list for the search dropdown
+  useEffect(() => {
+    fetch('/api/allowlist/list')
+      .then((r) => r.json())
+      .then((d) => setAllowVehicles(d.allowlist || []))
+      .catch(() => {});
+  }, []);
+
+  const filteredAllowVehicles = allowVehicles.filter(
+    (v) => !vehicleNumber || String(v.v_num || '').includes(vehicleNumber.toUpperCase())
+  );
 
   async function checkAllowList(vn) {
     try {
@@ -30,10 +45,11 @@ export default function Step2DocumentChecklist({ data, onSave, loading, username
     }
   }
 
-  async function searchVehicle() {
-    const vn = vehicleNumber.trim().toUpperCase();
+  async function searchVehicle(vnOverride) {
+    const vn = (vnOverride || vehicleNumber).trim().toUpperCase();
     if (!vn) return;
     setSearching(true);
+    setDropdownOpen(false);
     try {
       const res = await fetch(`/api/vehicle/search?vehicle_number=${encodeURIComponent(vn)}`);
       const json = await res.json();
@@ -99,11 +115,17 @@ export default function Step2DocumentChecklist({ data, onSave, loading, username
       return;
     }
 
+    const booking = allowVehicles.find(
+      (v) => String(v.v_num || '').trim().toUpperCase() === vehicleNumber.trim().toUpperCase()
+    );
+
     onSave({
       ...(loadedInspectionId ? { loaded_inspection_id: loadedInspectionId } : {}),
       vehicle_number: vehicleNumber.trim().toUpperCase(),
       vehicle_lane: vehicleLane,
       lane_type: laneType,
+      ...(booking && booking.b_num ? { b_num: booking.b_num } : {}),
+      ...(booking && booking.b_nam ? { b_nam: booking.b_nam } : {}),
     });
   }
 
@@ -118,26 +140,54 @@ export default function Step2DocumentChecklist({ data, onSave, loading, username
           </p>
         )} */}
           {errors._vehicle && <p className="text-red-500 text-xs mt-1">{errors._vehicle}</p>}
-        {allowStatus && (
+        {/* {allowStatus && (
           <p className={`text-xs mb-1 font-semibold ${allowStatus === 'allowed' ? 'text-green-600' : 'text-red-500'}`}>
             {allowStatus === 'allowed' ? 'Vehicle is in the  list' : 'Vehicle is NOT in the list'}
           </p>
-        )}
+        )} */}
         <div className="flex gap-2">
-          <input
-            type="text"
-            placeholder="Enter Vehicle Number (e.g. AP02AB1234)"
-            value={vehicleNumber}
-            onChange={(e) => { setVehicleNumber(e.target.value.toUpperCase()); setNoVehicleFound(false); setErrors({}); setAllowStatus(null); }}
-            onKeyDown={(e) => e.key === 'Enter' && searchVehicle()}
-            className="form-input uppercase"
-            style={{ border: allowStatus === 'allowed' ? '2px solid #22c55e' : allowStatus === 'not-allowed' ? '2px solid #ef4444' : undefined }}
-            disabled={searchDone}
-          />
+          <div className="relative flex-1">
+            <input
+              type="text"
+              placeholder="Enter Vehicle Number (e.g. AP02AB1234)"
+              value={vehicleNumber}
+              onChange={(e) => { setVehicleNumber(e.target.value.toUpperCase()); setNoVehicleFound(false); setErrors({}); setAllowStatus(null); setDropdownOpen(true); }}
+              onKeyDown={(e) => e.key === 'Enter' && searchVehicle()}
+              onFocus={() => setDropdownOpen(true)}
+              onMouseEnter={() => setDropdownOpen(true)}
+              onBlur={() => setTimeout(() => setDropdownOpen(false), 150)}
+              className="form-input uppercase"
+              style={{ border: allowStatus === 'allowed' ? '2px solid #22c55e' : allowStatus === 'not-allowed' ? '2px solid #ef4444' : undefined }}
+              disabled={searchDone}
+            />
+            {dropdownOpen && !searchDone && (
+              <div className="absolute z-20 top-full mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-lg max-h-64 overflow-y-auto">
+                {filteredAllowVehicles.length === 0 ? (
+                  <div className="px-4 py-3 text-sm text-gray-400">No vehicles found on allow list</div>
+                ) : (
+                  filteredAllowVehicles.map((v, i) => (
+                    <button
+                      key={i}
+                      type="button"
+                      onMouseDown={() => {
+                        setVehicleNumber(String(v.v_num || '').toUpperCase());
+                        setDropdownOpen(false);
+                        searchVehicle(String(v.v_num || '').toUpperCase());
+                      }}
+                      className="w-full text-left px-4 py-2.5 hover:bg-blue-50 border-b border-gray-50 last:border-0 flex items-center justify-between gap-2"
+                    >
+                      <span className="font-mono font-semibold text-gray-800 text-sm">{v.v_num}</span>
+                      <span className="text-xs text-gray-400 truncate">{v.b_nam || ''}</span>
+                    </button>
+                  ))
+                )}
+              </div>
+            )}
+          </div>
           {!searchDone ? (
             <button
               type="button"
-              onClick={searchVehicle}
+              onClick={() => searchVehicle()}
               disabled={searching || !vehicleNumber}
               className="px-4 py-3 bg-blue-600 text-white rounded-xl font-semibold text-sm whitespace-nowrap disabled:opacity-50 active:scale-95"
             >
@@ -146,7 +196,7 @@ export default function Step2DocumentChecklist({ data, onSave, loading, username
           ) : (
             <button
               type="button"
-              onClick={() => { setSearchDone(false); setVehicleNumber(''); setNoVehicleFound(false); setVehicleLane(''); setLaneType(''); setAllowStatus(null); }}
+              onClick={() => { setSearchDone(false); setVehicleNumber(''); setNoVehicleFound(false); setVehicleLane(''); setLaneType(''); setAllowStatus(null); setDropdownOpen(false); }}
               className="px-4 py-3 bg-gray-200 text-gray-700 rounded-xl font-semibold text-sm whitespace-nowrap active:scale-95"
             >
               Clear

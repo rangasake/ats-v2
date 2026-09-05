@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import Head from 'next/head';
 import AppLayout from '../../components/layout/AppLayout';
 import { withAuth } from '../../lib/useAuth';
-import { ROLES } from '../../lib/constants';
+import { ROLES, ADMIN_ROLES } from '../../lib/constants';
 
 function AdminDevices() {
   const [devices, setDevices]       = useState([]);
@@ -262,4 +262,4 @@ function AdminDevices() {
   );
 }
 
-export default withAuth(AdminDevices, [ROLES.ADMIN]);
+export default withAuth(AdminDevices, ADMIN_ROLES);

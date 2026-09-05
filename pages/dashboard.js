@@ -6,7 +6,7 @@ import AppLayout from '../components/layout/AppLayout';
 import StatusBadge from '../components/ui/StatusBadge';
 import { withAuth } from '../lib/useAuth';
 import { useAuth } from '../lib/useAuth';
-import { INSPECTION_STATUS, ROLES } from '../lib/constants';
+import { INSPECTION_STATUS, ROLES, ADMIN_ROLES } from '../lib/constants';
 import { usePullToRefresh } from '../lib/usePullToRefresh';
 
 function Dashboard() {
@@ -83,7 +83,7 @@ function Dashboard() {
           </div>
         )}
         {/* Quick Actions */}
-        {(user?.role === ROLES.INSPECTOR || user?.role === ROLES.ADMIN) && (
+        {(user?.role === ROLES.INSPECTOR || ADMIN_ROLES.includes(user?.role)) && (
           <Link href="/inspection/new">
             <div className="text-white rounded-2xl p-4 mb-3 flex items-center gap-3 active:scale-98 transition-transform shadow-lg" style={{ background: 'linear-gradient(135deg, #2563eb, #1e3a8a)' }}>
               <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center text-2xl">➕</div>
@@ -96,7 +96,7 @@ function Dashboard() {
         )}
 
         {/* Review Queue — top shortcut for Supervisor/Admin */}
-        {(user?.role === ROLES.SUPERVISOR || user?.role === ROLES.ADMIN) && (
+        {(user?.role === ROLES.SUPERVISOR || ADMIN_ROLES.includes(user?.role)) && (
           <Link href="/supervisor">
             <div className="bg-orange-50 border border-orange-200 rounded-2xl p-4 mb-4 flex items-center justify-between active:scale-98 transition-transform">
               <div className="flex items-center gap-3">

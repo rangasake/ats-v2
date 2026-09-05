@@ -7,7 +7,8 @@ import {
   ensureHeaders,
   logAudit,
 } from "../../../lib/googleSheets";
-import { SHEETS, INSPECTION_STATUS } from "../../../lib/constants";
+import { SHEETS, INSPECTION_STATUS, ADMIN_ROLES } from "../../../lib/constants";
+import { VEHICLE_HEADERS } from "../../../lib/vehicleFields";
 import { getOrgByHost } from "../../../lib/orgs";
 
 /**
@@ -226,6 +227,10 @@ async function handler(req, res) {
       "cert_id",
       "inspection_result",
       "fail_reason",
+      "b_num",
+      "b_nam",
+      "ins_result",
+      "fc_expiry",
     ]);
 
     // --------------------------------------------------
@@ -261,25 +266,31 @@ async function handler(req, res) {
 
         booking_id: finalBookingId,
 
+        b_num: agent_phone || inspection.agent_phone || "",
+
+        b_nam: agent_name || inspection.b_nam || inspection.agent_name || "",
+
+        ins_result: inspection_result || inspection.ins_result || "",
+
         supervisor_remarks: supervisor_remarks || "",
 
         inspection_result: inspection_result || "",
 
         fail_reason: inspection_result === "Fail" ? fail_reason || "" : "",
 
-        test_date:         test_date         || "",
-        test_type:         test_type         || "",
-        afms_free_receipt: afms_free_receipt || "",
-        rc:                rc                || "",
-        last_rc:           last_rc           || "",
-        last_rc_expiry:    last_rc_expiry    || "",
-        puc:               puc               || "",
-        puc_expiry:        puc_expiry        || "",
-        insurance:         insurance         || "",
-        insurance_expiry:  insurance_expiry  || "",
-        insurance_company: insurance_company || "",
-        speed_governor:    speed_governor    || "",
-        vlt_device:        vlt_device        || "",
+        test_date:         test_date         || inspection.test_date         || "",
+        test_type:         test_type         || inspection.test_type         || "",
+        afms_free_receipt: afms_free_receipt || inspection.afms_free_receipt || "",
+        rc:                rc                || inspection.rc                || "",
+        last_rc:           last_rc           || inspection.last_rc           || "",
+        last_rc_expiry:    last_rc_expiry    || inspection.last_rc_expiry    || "",
+        puc:               puc               || inspection.puc               || "",
+        puc_expiry:        puc_expiry        || inspection.puc_expiry        || "",
+        insurance:         insurance         || inspection.insurance         || "",
+        insurance_expiry:  insurance_expiry  || inspection.insurance_expiry  || "",
+        insurance_company: insurance_company || inspection.insurance_company || "",
+        speed_governor:    speed_governor    || inspection.speed_governor    || "",
+        vlt_device:        vlt_device        || inspection.vlt_device        || "",
 
         ...(certId ? { cert_id: certId } : {}),
 
@@ -291,6 +302,57 @@ async function handler(req, res) {
       return res.status(500).json({
         error: "Failed to update inspection",
       });
+    }
+
+    // --------------------------------------------------
+    // Sync booking + result to the Vehicles tab as well, so the
+    // Vehicles tab is updated even if the browser's fire-and-forget
+    // vehicle save silently fails.
+    // --------------------------------------------------
+
+    try {
+      const vn = (inspection.vehicle_number || "").trim().toUpperCase();
+      if (vn) {
+        await ensureHeaders(org.sheetId, SHEETS.VEHICLES, VEHICLE_HEADERS);
+
+        const vehicleRow = {
+          b_num:      agent_phone || inspection.agent_phone || "",
+          b_nam:      agent_name || inspection.b_nam || inspection.agent_name || "",
+          ins_result: inspection_result || inspection.ins_result || "",
+          fc_expiry:  inspection.fc_expiry || "",
+        };
+
+        const vehicleExists = await findRow(
+          org.sheetId,
+          SHEETS.VEHICLES,
+          "vehicle_number",
+          vn,
+        );
+
+        if (vehicleExists) {
+          await updateRow(
+            org.sheetId,
+            SHEETS.VEHICLES,
+            "vehicle_number",
+            vn,
+            {
+              ...vehicleRow,
+              updated_at: now,
+            },
+          );
+        } else {
+          await appendRow(org.sheetId, SHEETS.VEHICLES, {
+            vehicle_number: vn,
+            vehicle_lane:   inspection.vehicle_lane || "",
+            lane_type:      inspection.lane_type    || "",
+            ...vehicleRow,
+            created_at: now,
+            updated_at: now,
+          });
+        }
+      }
+    } catch (vehErr) {
+      console.error("[REVIEW] Vehicles tab sync failed:", vehErr?.message);
     }
 
     // --------------------------------------------------
@@ -329,4 +391,4 @@ async function handler(req, res) {
   }
 }
 
-export default requireAuth(handler, ["Supervisor", "Admin"]);
+export default requireAuth(handler, ["Supervisor", ...ADMIN_ROLES]);

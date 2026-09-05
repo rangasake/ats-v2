@@ -1,6 +1,6 @@
 import { requireAuth } from '../../../lib/auth';
 import { ensureHeaders, findRow, appendRow, updateRow } from '../../../lib/googleSheets';
-import { SHEETS, INSPECTION_STATUS } from '../../../lib/constants';
+import { SHEETS, INSPECTION_STATUS, ADMIN_ROLES } from '../../../lib/constants';
 import { getOrgByHost } from '../../../lib/orgs';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -12,7 +12,7 @@ async function handler(req, res) {
 
   try {
     const org = getOrgByHost(req.headers.host);
-    await ensureHeaders(org.sheetId, SHEETS.INSPECTIONS, ['lat_long']);
+    await ensureHeaders(org.sheetId, SHEETS.INSPECTIONS, ['lat_long', 'b_num', 'b_nam', 'ins_result', 'fc_expiry']);
 
     if (String(step) === '3' && !stepData.lat_long?.trim() && stepData.lat_long !== undefined) {
       return res.status(400).json({ error: 'Vehicle location is required' });
@@ -22,7 +22,7 @@ async function handler(req, res) {
       // Update existing
       const existing = await findRow(org.sheetId, SHEETS.INSPECTIONS, 'inspection_id', inspection_id);
       if (!existing) return res.status(404).json({ error: 'Inspection not found' });
-      if (existing.inspector_username !== req.user.username && req.user.role !== 'Admin') {
+      if (existing.inspector_username !== req.user.username && !ADMIN_ROLES.includes(req.user.role)) {
         return res.status(403).json({ error: 'Not authorized' });
       }
 
@@ -56,4 +56,4 @@ async function handler(req, res) {
   }
 }
 
-export default requireAuth(handler, ['Inspector', 'Admin']);
+export default requireAuth(handler, ['Inspector', ...ADMIN_ROLES]);

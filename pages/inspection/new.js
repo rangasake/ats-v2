@@ -4,13 +4,14 @@ import { useRouter } from 'next/router';
 import AppLayout from '../../components/layout/AppLayout';
 import StepIndicator from '../../components/ui/StepIndicator';
 import Step2DocumentChecklist from '../../components/forms/Step2DocumentChecklist';
+import DocumentChecklist from '../../components/forms/DocumentChecklist';
 import Step3VisualChecklist from '../../components/forms/Step3VisualChecklist';
 import Step4StaffFeedback from '../../components/forms/Step4StaffFeedback';
 import { withAuth } from '../../lib/useAuth';
 import { useAuth } from '../../lib/useAuth';
-import { ROLES } from '../../lib/constants';
+import { ROLES, ADMIN_ROLES } from '../../lib/constants';
 
-const STEPS = ['Documents', 'Visual Test', 'Staff & Feedback'];
+const STEPS = ['Vehicle Search', 'Document Checklist', 'Visual Test', 'Staff & Feedback'];
 
 function NewInspection() {
   const router = useRouter();
@@ -25,6 +26,7 @@ function NewInspection() {
 
   const [vehicleData, setVehicleData] = useState({});
   const [docData, setDocData] = useState({});
+  const [checklistData, setChecklistData] = useState({});
   const [visualData, setVisualData] = useState({});
   const [laneConfig, setLaneConfig] = useState({ doc_hidden: [], visual_hidden: [] });
   const [rejectionInfo, setRejectionInfo] = useState(null);
@@ -48,7 +50,7 @@ function NewInspection() {
       // Resume is only allowed for the owner (or admin). Non-owners must go
       // through the takeover popup first so inspector_username is transferred
       // — otherwise save/submit would 403 with "Not authorized".
-      if (insp.status === 'Draft' && insp.inspector_username && insp.inspector_username !== user?.username && user?.role !== ROLES.ADMIN) {
+      if (insp.status === 'Draft' && insp.inspector_username && insp.inspector_username !== user?.username && !ADMIN_ROLES.includes(user?.role)) {
         setConflictDraft({
           inspection_id:      insp.inspection_id,
           inspector_username: insp.inspector_username,
@@ -60,8 +62,15 @@ function NewInspection() {
 
       const vRes = await fetch(`/api/vehicle/search?vehicle_number=${insp.vehicle_number}`);
       const vData = await vRes.json();
-      if (!vData.found) throw new Error('Vehicle not found for this draft');
-      const vehicle = vData.vehicle;
+      // If the vehicle row is missing (deleted or legacy draft), fall back to the
+      // inspection row itself so the user can still resume/re-save.
+      const vehicle = vData.found
+        ? vData.vehicle
+        : {
+            vehicle_number: insp.vehicle_number || '',
+            vehicle_lane:   insp.vehicle_lane   || '',
+            lane_type:      insp.lane_type      || '',
+          };
       setVehicleData({ ...vehicle, status: insp.status });
 
       const cfgRes = await fetch('/api/admin/lane-config');
@@ -76,6 +85,25 @@ function NewInspection() {
         vehicle_number:    insp.vehicle_number  || vehicle.vehicle_number || '',
         vehicle_lane:      insp.vehicle_lane    || vehicle.vehicle_lane   || '',
         lane_type:         insp.lane_type       || vehicle.lane_type      || '',
+        b_num:             insp.b_num           || vehicle.b_num          || '',
+        b_nam:             insp.b_nam           || vehicle.b_nam          || '',
+      });
+
+      setChecklistData({
+        test_date:         insp.test_date         || '',
+        test_type:         insp.test_type         || '',
+        afms_free_receipt: insp.afms_free_receipt || '',
+        rc:                insp.rc                || '',
+        last_rc:           insp.last_rc           || '',
+        last_rc_expiry:    insp.last_rc_expiry    || '',
+        puc:               insp.puc               || '',
+        puc_expiry:        insp.puc_expiry        || '',
+        insurance:         insp.insurance         || '',
+        insurance_expiry:  insp.insurance_expiry  || '',
+        insurance_company: insp.insurance_company || '',
+        speed_governor:    insp.speed_governor    || '',
+        vlt_device:        insp.vlt_device        || '',
+        fc_expiry:         insp.fc_expiry         || '',
       });
 
       const restoredVisualData = insp.visual_data ? tryParse(insp.visual_data, {}) : {};
@@ -97,6 +125,8 @@ function NewInspection() {
         const restoredVis = insp.visual_data ? tryParse(insp.visual_data, {}) : {};
         const visualDone  = Object.keys(restoredVis).some((k) => restoredVis[k]);
         if (visualDone) {
+          setStep(4);
+        } else if (Number(insp.step) >= 3) {
           setStep(3);
         } else if (Number(insp.step) >= 2) {
           setStep(2);
@@ -119,6 +149,8 @@ function NewInspection() {
         vehicle_number: formData.vehicle_number,
         vehicle_lane:    formData.vehicle_lane,
         lane_type:       formData.lane_type,
+        ...(formData.b_num ? { b_num: formData.b_num } : {}),
+        ...(formData.b_nam ? { b_nam: formData.b_nam } : {}),
       };
 
       const vRes = await fetch('/api/vehicle/save', {
@@ -165,7 +197,12 @@ function NewInspection() {
         const iRes = await fetch('/api/inspection/save', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ step: 1, vehicle_number: vehiclePayload.vehicle_number }),
+          body: JSON.stringify({
+            step: 1,
+            vehicle_number: vehiclePayload.vehicle_number,
+            b_num: vehiclePayload.b_num,
+            b_nam: vehiclePayload.b_nam,
+          }),
         });
         const iData = await iRes.json();
         if (!iData.inspection_id) throw new Error('Failed to create inspection');
@@ -198,6 +235,64 @@ function NewInspection() {
     }
   }
 
+  async function handleDocumentChecklist(formData) {
+    setLoading(true);
+    setError('');
+    try {
+      const saveRes = await fetch('/api/inspection/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          inspection_id:  inspectionId,
+          step:           2,
+          test_date:         formData.test_date         || '',
+          test_type:         formData.test_type         || '',
+          afms_free_receipt: formData.afms_free_receipt || '',
+          rc:                formData.rc                || '',
+          last_rc:           formData.last_rc           || '',
+          last_rc_expiry:    formData.last_rc_expiry    || '',
+          puc:               formData.puc               || '',
+          puc_expiry:        formData.puc_expiry        || '',
+          insurance:         formData.insurance         || '',
+          insurance_expiry:  formData.insurance_expiry  || '',
+          insurance_company: formData.insurance_company || '',
+          speed_governor:    formData.speed_governor    || '',
+          vlt_device:        formData.vlt_device        || '',
+          fc_expiry:         formData.fc_expiry         || '',
+        }),
+      });
+      if (!saveRes.ok) {
+        const saveData = await saveRes.json().catch(() => ({}));
+        throw new Error(saveData.error || 'Failed to save document checklist');
+      }
+
+      if (vehicleData.vehicle_number) {
+        const vUpRes = await fetch('/api/vehicle/save', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            vehicle_number: vehicleData.vehicle_number,
+            vehicle_lane:   vehicleData.vehicle_lane   || '',
+            lane_type:      vehicleData.lane_type      || '',
+            b_num:          vehicleData.b_num          || formData.b_num || '',
+            b_nam:          vehicleData.b_nam          || formData.b_nam || '',
+            fc_expiry:      formData.fc_expiry         || '',
+          }),
+        });
+        if (!vUpRes.ok) {
+          const vErr = await vUpRes.json().catch(() => ({}));
+          throw new Error(vErr.error || 'Failed to save vehicle data');
+        }
+      }
+      setChecklistData(formData);
+      setStep(3);
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
   async function handleStep2(formData) {
     setLoading(true);
     setError('');
@@ -218,7 +313,7 @@ function NewInspection() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           inspection_id:  inspectionId,
-          step:           2,
+          step:           3,
           visual_data:    JSON.stringify(visualChecklist),
           image_urls:     imageUrlsFlat,
           image_urls_json: imageUrlsJson,
@@ -230,7 +325,7 @@ function NewInspection() {
         throw new Error(saveData.error || 'Failed to save visual data');
       }
       setVisualData(formData);
-      setStep(3);
+      setStep(4);
     } catch (e) {
       setError(e.message);
     } finally {
@@ -239,11 +334,11 @@ function NewInspection() {
   }
 
   function fieldLabelToStep(label) {
-    const step1 = ['Test Date', 'Test Type'];
-    const step2 = ['Vehicle Location'];
-    if (step1.some((f) => label.includes(f))) return 1;
+    const step2 = ['Test Date', 'Test Type'];
+    const step3 = ['Vehicle Location'];
     if (step2.some((f) => label.includes(f))) return 2;
-    return 3;
+    if (step3.some((f) => label.includes(f))) return 3;
+    return 4;
   }
 
   async function handleSubmit(formData) {
@@ -306,7 +401,7 @@ function NewInspection() {
                 {conflictDraft.inspector_username}
               </p>
               <p className="text-xs text-gray-400 text-center mb-4 whitespace-nowrap">
-                Step {conflictDraft.step} of 3 · Last saved {conflictDraft.updated_at ? new Date(conflictDraft.updated_at).toLocaleString() : '—'}
+                Step {conflictDraft.step} of 4 · Last saved {conflictDraft.updated_at ? new Date(conflictDraft.updated_at).toLocaleString() : '—'}
               </p>
               <p className="text-sm text-gray-600 text-center mb-5 whitespace-nowrap">
                 Do you still want to continue?
@@ -401,6 +496,17 @@ function NewInspection() {
           />
         )}
         {step === 2 && (
+          <DocumentChecklist
+            data={checklistData}
+            laneType={vehicleData.lane_type}
+            docHidden={laneConfig.doc_hidden}
+            registrationDate={vehicleData.registration_date}
+            onSave={handleDocumentChecklist}
+            onBack={() => setStep(1)}
+            loading={loading}
+          />
+        )}
+        {step === 3 && (
           <Step3VisualChecklist
             data={visualData}
             laneType={vehicleData.lane_type}
@@ -409,15 +515,15 @@ function NewInspection() {
             vehicleNumber={vehicleData.vehicle_number}
             vehicleLane={vehicleData.vehicle_lane}
             onSave={handleStep2}
-            onBack={() => setStep(1)}
+            onBack={() => setStep(2)}
             loading={loading}
           />
         )}
-        {step === 3 && (
+        {step === 4 && (
           <Step4StaffFeedback
             data={{}}
             onSubmit={handleSubmit}
-            onBack={() => setStep(2)}
+            onBack={() => setStep(3)}
             loading={loading}
           />
         )}
@@ -430,4 +536,4 @@ function tryParse(str, fallback) {
   try { return JSON.parse(str); } catch { return fallback; }
 }
 
-export default withAuth(NewInspection, [ROLES.INSPECTOR, ROLES.ADMIN]);
+export default withAuth(NewInspection, [ROLES.INSPECTOR, ...ADMIN_ROLES]);

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import Head from 'next/head';
 import AppLayout from '../../components/layout/AppLayout';
 import { withAuth } from '../../lib/useAuth';
-import { ROLES, LANE_TYPES, DOC_CHECKLIST_ITEMS, VISUAL_CHECKLIST_ITEMS } from '../../lib/constants';
+import { ROLES, ADMIN_ROLES, LANE_TYPES, DOC_CHECKLIST_ITEMS, VISUAL_CHECKLIST_ITEMS } from '../../lib/constants';
 
 function LaneConfig() {
   const [configs, setConfigs] = useState([]);
@@ -142,4 +142,4 @@ function tryParse(str, fallback) {
   try { return JSON.parse(str); } catch { return fallback; }
 }
 
-export default withAuth(LaneConfig, [ROLES.ADMIN]);
+export default withAuth(LaneConfig, ADMIN_ROLES);

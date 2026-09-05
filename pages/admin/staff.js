@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import Head from 'next/head';
 import AppLayout from '../../components/layout/AppLayout';
 import { withAuth } from '../../lib/useAuth';
-import { ROLES } from '../../lib/constants';
+import { ROLES, ADMIN_ROLES } from '../../lib/constants';
 
 // Client-side page — calls API
 function AdminStaff() {
@@ -250,4 +250,4 @@ function AdminStaff() {
   );
 }
 
-export default withAuth(AdminStaff, [ROLES.ADMIN]);
+export default withAuth(AdminStaff, ADMIN_ROLES);

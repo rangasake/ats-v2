@@ -1,23 +1,8 @@
 import { requireAuth } from '../../../lib/auth';
 import { ensureHeaders, findRow, appendRow, updateRow } from '../../../lib/googleSheets';
-import { SHEETS } from '../../../lib/constants';
+import { SHEETS, ADMIN_ROLES } from '../../../lib/constants';
+import { VEHICLE_FIELDS, VEHICLE_HEADERS } from '../../../lib/vehicleFields';
 import { getOrgByHost } from '../../../lib/orgs';
-
-const VEHICLE_FIELDS = [
-  'vehicle_number',
-  'engine_number',
-  'chassis_number',
-  'meter_reading',
-  'owner_name',
-  'owner_phone',
-  'mandal_name',
-  'rto_office',
-  'vehicle_lane',
-  'lane_type',
-  'registration_date',
-];
-
-const VEHICLE_HEADERS = [...VEHICLE_FIELDS, 'created_at', 'updated_at'];
 
 function buildVehiclePayload(data, vehicleNumber) {
   return VEHICLE_FIELDS.reduce((payload, field) => {
@@ -69,4 +54,4 @@ async function handler(req, res) {
   }
 }
 
-export default requireAuth(handler, ['Inspector', 'Supervisor', 'Admin']);
+export default requireAuth(handler, ['Inspector', 'Supervisor', ...ADMIN_ROLES]);

@@ -7,7 +7,7 @@ import StatusBadge from '../../components/ui/StatusBadge';
 import PrintLayout from '../../components/forms/PrintLayout';
 import { withAuth } from '../../lib/useAuth';
 import { useAuth } from '../../lib/useAuth';
-import { ROLES, INSPECTION_STATUS, VISUAL_CHECKLIST_ITEMS, DOC_CHECKLIST_ITEMS } from '../../lib/constants';
+import { ROLES, ADMIN_ROLES, INSPECTION_STATUS, VISUAL_CHECKLIST_ITEMS, DOC_CHECKLIST_ITEMS } from '../../lib/constants';
 import { useSelector } from 'react-redux';
 function safeParseJSON(str, fallback = {}) {
   try { return JSON.parse(str); } catch { return fallback; }
@@ -126,7 +126,7 @@ function InspectionDetail() {
         {vehicle && (
           <Section
             title="🚗 Vehicle Information"
-            action={user?.role === ROLES.SUPERVISOR || user?.role === ROLES.ADMIN ? (
+            action={user?.role === ROLES.SUPERVISOR || ADMIN_ROLES.includes(user?.role) ? (
               <button
                 onClick={() => router.push(`/supervisor/review/${id}`)}
                 className="text-blue-600 hover:text-blue-800 transition-colors p-1"
@@ -146,6 +146,10 @@ function InspectionDetail() {
             <InfoRow label="Mandal / RTO" value={`${vehicle.mandal_name} / ${vehicle.rto_office}`} />
             <InfoRow label="Lane" value={`${vehicle.vehicle_lane} / ${vehicle.lane_type}`} />
             <InfoRow label="Reg. Date" value={vehicle.registration_date} />
+            <InfoRow label="Booking Phone" value={vehicle.b_num} />
+            <InfoRow label="Booking Name" value={vehicle.b_nam} />
+            <InfoRow label="Result" value={vehicle.ins_result} />
+            <InfoRow label="FC Validity" value={vehicle.fc_expiry ? `${vehicle.fc_expiry} Years` : ''} />
           </Section>
         )}
 
@@ -198,7 +202,7 @@ function InspectionDetail() {
         <div className="space-y-3 mt-4 no-print">
 
           {/* Continue if draft — any inspector can continue; non-owners are routed through the takeover popup in the resume flow */}
-          {inspection.status === INSPECTION_STATUS.DRAFT && (user?.role === ROLES.INSPECTOR || user?.role === ROLES.ADMIN) && (
+          {inspection.status === INSPECTION_STATUS.DRAFT && (user?.role === ROLES.INSPECTOR || ADMIN_ROLES.includes(user?.role)) && (
             <button
               onClick={() => router.push(`/inspection/new?resume=${id}`)}
               className="btn-primary"
@@ -208,7 +212,7 @@ function InspectionDetail() {
           )}
 
           {/* Inspector: edit & resubmit rejected entry — only the original inspector (or admin), since takeover only applies to drafts */}
-          {inspection.status === INSPECTION_STATUS.REJECTED && (inspection.inspector_username === user?.username || user?.role === ROLES.ADMIN) && (
+          {inspection.status === INSPECTION_STATUS.REJECTED && (inspection.inspector_username === user?.username || ADMIN_ROLES.includes(user?.role)) && (
             <div className="bg-red-50 border border-red-200 rounded-2xl p-4">
               <div className="flex items-center gap-2 mb-2">
                 <span className="text-lg">❌</span>
@@ -229,12 +233,12 @@ function InspectionDetail() {
           )}
 
           {/* Supervisor: reopen rejected entry back to Draft */}
-          {inspection.status === INSPECTION_STATUS.REJECTED && (user?.role === ROLES.SUPERVISOR || user?.role === ROLES.ADMIN) && (
+          {inspection.status === INSPECTION_STATUS.REJECTED && (user?.role === ROLES.SUPERVISOR || ADMIN_ROLES.includes(user?.role)) && (
             <ReopenButton inspectionId={id} onDone={fetchData} />
           )}
 
           {/* Supervisor review button */}
-          {inspection.status === INSPECTION_STATUS.PENDING && (user?.role === ROLES.SUPERVISOR || user?.role === ROLES.ADMIN) && (
+          {inspection.status === INSPECTION_STATUS.PENDING && (user?.role === ROLES.SUPERVISOR || ADMIN_ROLES.includes(user?.role)) && (
             <button
               onClick={() => router.push(`/supervisor/review/${id}`)}
               className="btn-success"

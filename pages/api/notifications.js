@@ -1,6 +1,6 @@
 import { requireAuth } from '../../lib/auth';
 import { getRows } from '../../lib/googleSheets';
-import { SHEETS, INSPECTION_STATUS } from '../../lib/constants';
+import { SHEETS, INSPECTION_STATUS, ADMIN_ROLES } from '../../lib/constants';
 import { getOrgByHost } from '../../lib/orgs';
 
 async function handler(req, res) {
@@ -11,7 +11,7 @@ async function handler(req, res) {
     const notifications = [];
 
     // ── 1. Takeover notifications (Inspector + Admin only) ─────────────────
-    if (req.user.role === 'Inspector' || req.user.role === 'Admin') {
+    if (req.user.role === 'Inspector' || ADMIN_ROLES.includes(req.user.role)) {
       const inspRows = await getRows(org.sheetId, SHEETS.INSPECTIONS);
       const takeovers = inspRows
         .filter(
@@ -39,7 +39,7 @@ async function handler(req, res) {
         (r) =>
           r.id &&
           r.id !== 'deleted' &&
-          (r.target_role === 'All' || r.target_role === req.user.role || req.user.role === 'Admin')
+          (r.target_role === 'All' || r.target_role === req.user.role || ADMIN_ROLES.includes(req.user.role))
       )
       .map((r) => ({
         id:          `ann_${r.id}`,

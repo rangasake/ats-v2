@@ -1,6 +1,6 @@
 import { requireAuth } from '../../../lib/auth';
 import { getRows, findRow, updateRow, appendRow } from '../../../lib/googleSheets';
-import { SHEETS } from '../../../lib/constants';
+import { SHEETS, ADMIN_ROLES } from '../../../lib/constants';
 import { getOrgByHost } from '../../../lib/orgs';
 
 async function handler(req, res) {
@@ -15,7 +15,7 @@ async function handler(req, res) {
   }
 
   if (req.method === 'POST') {
-    if (req.user.role !== 'Admin') {
+    if (!ADMIN_ROLES.includes(req.user.role)) {
       return res.status(403).json({ error: 'Forbidden' });
     }
 
@@ -42,4 +42,4 @@ async function handler(req, res) {
   return res.status(405).end();
 }
 
-export default requireAuth(handler, ['Admin', 'Inspector', 'Supervisor']);
+export default requireAuth(handler, [...ADMIN_ROLES, 'Inspector', 'Supervisor']);

@@ -4,7 +4,7 @@ import Link from 'next/link';
 import AppLayout from '../../components/layout/AppLayout';
 import StatusBadge from '../../components/ui/StatusBadge';
 import { withAuth } from '../../lib/useAuth';
-import { ROLES, INSPECTION_STATUS } from '../../lib/constants';
+import { ROLES, ADMIN_ROLES, INSPECTION_STATUS } from '../../lib/constants';
 import { usePullToRefresh } from '../../lib/usePullToRefresh';
 
 function SupervisorQueue() {
@@ -147,4 +147,4 @@ function SupervisorQueue() {
   );
 }
 
-export default withAuth(SupervisorQueue, [ROLES.SUPERVISOR, ROLES.ADMIN]);
+export default withAuth(SupervisorQueue, [ROLES.SUPERVISOR, ...ADMIN_ROLES]);

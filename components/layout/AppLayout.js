@@ -2,7 +2,7 @@ import { useAuth } from '../../lib/useAuth';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
-import { ROLES } from '../../lib/constants';
+import { ROLES, ADMIN_ROLES } from '../../lib/constants';
 import { useSelector } from 'react-redux';
 
 
@@ -119,11 +119,11 @@ export default function AppLayout({ children, title }) {
   const bottomTabs = () => {
     if (!user) return [];
     const tabs = [{ href: '/dashboard', icon: '🏠', label: 'Home' }];
-    if (user.role === ROLES.INSPECTOR || user.role === ROLES.ADMIN)
+    if (user.role === ROLES.INSPECTOR || ADMIN_ROLES.includes(user.role))
       tabs.push({ href: '/inspection/new', icon: '➕', label: 'New' });
-    if (user.role === ROLES.SUPERVISOR || user.role === ROLES.ADMIN)
+    if (user.role === ROLES.SUPERVISOR || ADMIN_ROLES.includes(user.role))
       tabs.push({ href: '/supervisor', icon: '📋', label: 'Queue' });
-    if (user.role === ROLES.ADMIN)
+    if (ADMIN_ROLES.includes(user.role))
       tabs.push({ href: '/admin/reports', icon: '📊', label: 'Reports' });
     return tabs;
   };
@@ -132,21 +132,23 @@ export default function AppLayout({ children, title }) {
   const navLinks = () => {
     if (!user) return [];
     const links = [{ href: '/dashboard', label: '🏠 Dashboard' }];
-    if (user.role === ROLES.INSPECTOR || user.role === ROLES.ADMIN) {
+    if (user.role === ROLES.INSPECTOR || ADMIN_ROLES.includes(user.role)) {
       links.push({ href: '/inspection/new', label: '➕ New Inspection' });
     }
-    if (user.role === ROLES.SUPERVISOR || user.role === ROLES.ADMIN) {
+    if (user.role === ROLES.SUPERVISOR || ADMIN_ROLES.includes(user.role)) {
       links.push({ href: '/supervisor', label: '📋 Review Queue' });
     }
-    if (user.role === ROLES.ADMIN) {
+    if (ADMIN_ROLES.includes(user.role)) {
       links.push({ href: '/admin/users',          label: '👥 Users' });
       links.push({ href: '/admin/staff',          label: '👷 Staff' });
       links.push({ href: '/admin/lane-config',    label: '⚙️ Lane Config' });
       links.push({ href: '/admin/devices',        label: '📱 Devices' });
       links.push({ href: '/admin/announcements',  label: '📢 Send Notifications' });
       links.push({ href: '/admin/reports',        label: '📊 Reports' });
-      links.push({ href: '/admin/allowlist',     label: '✅ Allow List' });
       links.push({ href: '/admin/audit',          label: '🗒️ Audit Log' });
+    }
+    if (user.role === ROLES.SUPER_ADMIN) {
+      links.push({ href: '/admin/allowlist',     label: '✅ Allow List' });
     }
     return links;
   };

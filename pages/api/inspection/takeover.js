@@ -1,6 +1,6 @@
 import { requireAuth } from '../../../lib/auth';
 import { findRow, updateRow, ensureHeaders } from '../../../lib/googleSheets';
-import { SHEETS, INSPECTION_STATUS } from '../../../lib/constants';
+import { SHEETS, INSPECTION_STATUS, ADMIN_ROLES } from '../../../lib/constants';
 import { getOrgByHost } from '../../../lib/orgs';
 
 async function handler(req, res) {
@@ -40,4 +40,4 @@ async function handler(req, res) {
   }
 }
 
-export default requireAuth(handler, ['Inspector', 'Admin']);
+export default requireAuth(handler, ['Inspector', ...ADMIN_ROLES]);

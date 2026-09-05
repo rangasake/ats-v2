@@ -1,9 +1,9 @@
 import { requireAuth } from '../../../lib/auth';
 import { ensureHeaders, getRows, appendRows, deleteRowsByValue } from '../../../lib/googleSheets';
-import { SHEETS } from '../../../lib/constants';
+import { SHEETS, ROLES } from '../../../lib/constants';
 import { getOrgByHost } from '../../../lib/orgs';
 
-const HEADERS = ['ts', 'v_num', 'b_num', 'b_nam'];
+const HEADERS = ['ts', 'v_num', 'b_num', 'b_nam', 'amt'];
 
 function cleanItems(input) {
   const items = [];
@@ -14,6 +14,7 @@ function cleanItems(input) {
       v_num,
       b_num: String(raw.b_num || '').trim(),
       b_nam: String(raw.b_nam || '').trim(),
+      amt:   String(raw.amt || '').trim(),
     });
   }
   return items;
@@ -54,7 +55,7 @@ async function handler(req, res) {
           started = true;
         }
         if (!first) continue;
-        parsed.push({ v_num: first.toUpperCase(), b_num: clean[1] || '', b_nam: clean[2] || '' });
+        parsed.push({ v_num: first.toUpperCase(), b_num: clean[1] || '', b_nam: clean[2] || '', amt: clean[3] || '' });
       }
     }
 
@@ -84,4 +85,4 @@ async function handler(req, res) {
   return res.status(405).end();
 }
 
-export default requireAuth(handler, ['Admin']);
+export default requireAuth(handler, [ROLES.SUPER_ADMIN]);

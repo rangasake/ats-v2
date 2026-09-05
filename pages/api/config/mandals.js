@@ -1,6 +1,7 @@
 import { requireAuth } from '../../../lib/auth';
 import { getOrgByHost } from '../../../lib/orgs';
 import { getRows } from '../../../lib/googleSheets';
+import { ADMIN_ROLES } from '../../../lib/constants';
 
 async function handler(req, res) {
   if (req.method !== 'GET') {
@@ -58,5 +59,5 @@ async function handler(req, res) {
 
 export default requireAuth(
   handler,
-  ['Inspector', 'Supervisor', 'Admin']
+  ['Inspector', 'Supervisor', ...ADMIN_ROLES]
 );

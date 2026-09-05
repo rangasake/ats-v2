@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import Head from 'next/head';
 import AppLayout from '../../components/layout/AppLayout';
 import { withAuth } from '../../lib/useAuth';
-import { ROLES } from '../../lib/constants';
+import { ROLES, ADMIN_ROLES } from '../../lib/constants';
 
 const TARGET_OPTIONS = [
   { value: 'All',        label: '🌐 Everyone (All roles)' },
@@ -180,4 +180,4 @@ function AdminAnnouncements() {
   );
 }
 
-export default withAuth(AdminAnnouncements, [ROLES.ADMIN]);
+export default withAuth(AdminAnnouncements, ADMIN_ROLES);

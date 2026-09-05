@@ -1,6 +1,6 @@
 import { requireAuth } from "../../../lib/auth";
 import { findRow, updateRow, logAudit } from "../../../lib/googleSheets";
-import { SHEETS, INSPECTION_STATUS } from "../../../lib/constants";
+import { SHEETS, INSPECTION_STATUS, ADMIN_ROLES } from "../../../lib/constants";
 import { getOrgByHost } from "../../../lib/orgs";
 
 async function handler(req, res) {
@@ -82,7 +82,7 @@ async function handler(req, res) {
 
     if (
       existing.inspector_username !== req.user.username &&
-      req.user.role !== "Admin"
+      !ADMIN_ROLES.includes(req.user.role)
     ) {
       return res.status(403).json({
         error: "Not authorized",
@@ -120,7 +120,7 @@ async function handler(req, res) {
       {
         ...finalData,
         status: INSPECTION_STATUS.PENDING,
-        step: "3",
+        step: "4",
         updated_at: new Date().toISOString(),
       },
     );
@@ -159,4 +159,4 @@ async function handler(req, res) {
   }
 }
 
-export default requireAuth(handler, ["Inspector", "Admin"]);
+export default requireAuth(handler, ["Inspector", ...ADMIN_ROLES]);

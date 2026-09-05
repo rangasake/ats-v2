@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import Head from 'next/head';
 import AppLayout from '../../components/layout/AppLayout';
 import { withAuth } from '../../lib/useAuth';
-import { ROLES } from '../../lib/constants';
+import { ROLES, ADMIN_ROLES } from '../../lib/constants';
 
 function AdminUsers() {
   const [users, setUsers] = useState([]);
@@ -15,6 +15,7 @@ function AdminUsers() {
   const [resetTarget, setResetTarget] = useState(null); // username
   const [resetPw, setResetPw] = useState('');
   const [resetSaving, setResetSaving] = useState(false);
+  const [editingRole, setEditingRole] = useState(null); // username
 
   useEffect(() => { fetchUsers(); }, []);
 
@@ -89,6 +90,25 @@ function AdminUsers() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to delete user');
       setSuccess(`${user.username} deleted`);
+      fetchUsers();
+    } catch (e) {
+      setError(e.message);
+    }
+  }
+
+  async function updateUserRole(user, role) {
+    setError('');
+    setSuccess('');
+    try {
+      const res = await fetch('/api/admin/users', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: user.username, role }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to update role');
+      setSuccess(`${user.username} role changed to ${role}`);
+      setEditingRole(null);
       fetchUsers();
     } catch (e) {
       setError(e.message);
@@ -189,7 +209,32 @@ function AdminUsers() {
                         {isActive(u) ? 'Active' : 'Inactive'}
                       </span>
                     </div>
-                    <div className="text-xs text-gray-500 mt-0.5">@{u.username} · {u.role}</div>
+                    <div className="text-xs text-gray-500 mt-0.5">
+                      @{u.username}
+                      {editingRole === u.username ? (
+                        <span className="flex items-center gap-2 mt-1">
+                          <select
+                            defaultValue={u.role}
+                            onChange={(e) => updateUserRole(u, e.target.value)}
+                            className="text-xs border border-blue-300 rounded-lg px-2 py-1.5 bg-white focus:outline-none"
+                            autoFocus
+                          >
+                            {Object.values(ROLES).map((r) => <option key={r} value={r}>{r}</option>)}
+                          </select>
+                          <button onClick={() => setEditingRole(null)} className="text-xs text-gray-400">Cancel</button>
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1.5 ml-1">
+                          <span className="text-gray-500">· {u.role}</span>
+                          <button
+                            onClick={() => setEditingRole(u.username)}
+                            className="text-xs text-blue-500 underline"
+                          >
+                            change
+                          </button>
+                        </span>
+                      )}
+                    </div>
                   </div>
                   <div className="flex gap-2 flex-wrap justify-end">
                     <button
@@ -260,4 +305,4 @@ function AdminUsers() {
   );
 }
 
-export default withAuth(AdminUsers, [ROLES.ADMIN]);
+export default withAuth(AdminUsers, ADMIN_ROLES);

@@ -1,7 +1,7 @@
 // pages/api/devices/list.js
 import { requireAuth } from '../../../lib/auth';
 import { getRows } from '../../../lib/googleSheets';
-import { SHEETS } from '../../../lib/constants';
+import { SHEETS, ADMIN_ROLES } from '../../../lib/constants';
 import { getOrgByHost } from '../../../lib/orgs';
 
 async function handler(req, res) {
@@ -12,7 +12,7 @@ async function handler(req, res) {
     // Never expose the raw token to non-admin — mask it
     const safe = devices.map((d) => ({
       ...d,
-      token: req.user.role === 'Admin'
+      token: ADMIN_ROLES.includes(req.user.role)
         ? d.token
         : d.token?.slice(0, 6) + '••••••••••••••••••••••••',
     }));
@@ -23,4 +23,4 @@ async function handler(req, res) {
   }
 }
 
-export default requireAuth(handler, ['Admin']);
+export default requireAuth(handler, ADMIN_ROLES);
