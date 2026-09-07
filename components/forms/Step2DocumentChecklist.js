@@ -177,7 +177,7 @@ export default function Step2DocumentChecklist({ data, onSave, loading, username
                       className="w-full text-left px-4 py-2.5 hover:bg-blue-50 border-b border-gray-50 last:border-0 flex items-center justify-between gap-2"
                     >
                       <span className="font-mono font-semibold text-gray-800 text-sm">{v.v_num}</span>
-                      <span className="text-xs text-gray-400 truncate">{v.b_nam || ''}</span>
+                      {/* <span className="text-xs text-gray-400 truncate">{v.b_nam || ''}</span> */}
                     </button>
                   ))
                 )}
