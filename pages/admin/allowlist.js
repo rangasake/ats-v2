@@ -144,7 +144,7 @@ function AdminAllowList() {
   }
 
   async function handleDelete(v_num) {
-    if (!confirm(`Remove ${v_num} from allow list? This deletes all matching rows.`)) return;
+    if (!confirm(`Remove ${v_num} from allow list? This marks all matching rows as inactive.`)) return;
     setDeleting(v_num);
     setError('');
     setSuccess('');
@@ -156,7 +156,7 @@ function AdminAllowList() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Delete failed');
-      setSuccess(`Removed ${data.deleted} row${data.deleted === 1 ? '' : 's'} for ${v_num}`);
+      setSuccess(`Marked ${data.deleted} row${data.deleted === 1 ? '' : 's'} as inactive for ${v_num}`);
       fetchList();
     } catch (e) {
       setError(e.message);

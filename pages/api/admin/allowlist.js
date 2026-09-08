@@ -1,5 +1,5 @@
 import { requireAuth } from '../../../lib/auth';
-import { ensureHeaders, getRows, appendRows, deleteRowsByValue } from '../../../lib/googleSheets';
+import { ensureHeaders, getRows, appendRows, updateRowsByValue } from '../../../lib/googleSheets';
 import { SHEETS, ROLES } from '../../../lib/constants';
 import { getOrgByHost } from '../../../lib/orgs';
 
@@ -72,13 +72,13 @@ async function handler(req, res) {
     }
   }
 
-  // DELETE — remove every row matching a vehicle number
+  // DELETE — soft delete: mark every row matching a vehicle number as inactive
   if (req.method === 'DELETE') {
     const { v_num } = req.body || {};
     if (!v_num) return res.status(400).json({ error: 'v_num required' });
     try {
-      const { deleted } = await deleteRowsByValue(org.sheetId, SHEETS.ALLOW_LIST, 'v_num', v_num);
-      return res.status(200).json({ success: true, deleted });
+      const updated = await updateRowsByValue(org.sheetId, SHEETS.ALLOW_LIST, 'v_num', v_num, { status: 'false' });
+      return res.status(200).json({ success: true, deleted: updated });
     } catch {
       return res.status(500).json({ error: 'Server error' });
     }
