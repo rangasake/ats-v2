@@ -3,7 +3,7 @@ import { ensureHeaders, getRows, appendRows, deleteRowsByValue } from '../../../
 import { SHEETS, ROLES } from '../../../lib/constants';
 import { getOrgByHost } from '../../../lib/orgs';
 
-const HEADERS = ['ts', 'v_num', 'b_num', 'b_nam', 'amt'];
+const HEADERS = ['ts', 'v_num', 'b_num', 'b_nam', 'amt', 'status'];
 
 function cleanItems(input) {
   const items = [];
@@ -24,11 +24,13 @@ async function handler(req, res) {
   const org = getOrgByHost(req.headers.host);
   await ensureHeaders(org.sheetId, SHEETS.ALLOW_LIST, HEADERS);
 
-  // GET — list all allowed vehicles (newest first)
+  // GET — list all allowed vehicles (newest first, excludes soft-deleted)
   if (req.method === 'GET') {
     try {
       const rows = await getRows(org.sheetId, SHEETS.ALLOW_LIST);
-      const list = rows.sort((a, b) => new Date(b.ts || 0) - new Date(a.ts || 0));
+      const list = rows
+        .filter((r) => String(r.status || 'true').toLowerCase() !== 'false')
+        .sort((a, b) => new Date(b.ts || 0) - new Date(a.ts || 0));
       return res.status(200).json({ allowlist: list, total: list.length });
     } catch {
       return res.status(500).json({ error: 'Server error' });
@@ -63,7 +65,7 @@ async function handler(req, res) {
 
     try {
       const now = new Date().toISOString();
-      await appendRows(org.sheetId, SHEETS.ALLOW_LIST, parsed.map((p) => ({ ...p, ts: now })));
+      await appendRows(org.sheetId, SHEETS.ALLOW_LIST, parsed.map((p) => ({ ...p, ts: now, status: 'true' })));
       return res.status(200).json({ success: true, added: parsed.length });
     } catch {
       return res.status(500).json({ error: 'Server error' });

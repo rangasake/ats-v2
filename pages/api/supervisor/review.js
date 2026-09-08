@@ -6,6 +6,7 @@ import {
   appendRow,
   ensureHeaders,
   logAudit,
+  updateRowsByValue,
 } from "../../../lib/googleSheets";
 import { SHEETS, INSPECTION_STATUS, ADMIN_ROLES } from "../../../lib/constants";
 import { VEHICLE_HEADERS } from "../../../lib/vehicleFields";
@@ -353,6 +354,28 @@ async function handler(req, res) {
       }
     } catch (vehErr) {
       console.error("[REVIEW] Vehicles tab sync failed:", vehErr?.message);
+    }
+
+    // --------------------------------------------------
+    // Soft-delete allowlist entry on approval
+    // --------------------------------------------------
+
+    if (action === "approve") {
+      try {
+        const vn = (inspection.vehicle_number || "").trim().toUpperCase();
+        if (vn) {
+          await ensureHeaders(org.sheetId, SHEETS.ALLOW_LIST, ['ts', 'v_num', 'b_num', 'b_nam', 'amt', 'status']);
+          await updateRowsByValue(
+            org.sheetId,
+            SHEETS.ALLOW_LIST,
+            "v_num",
+            vn,
+            { status: "false" },
+          );
+        }
+      } catch (alErr) {
+        console.error("[REVIEW] Allowlist soft-delete failed:", alErr?.message);
+      }
     }
 
     // --------------------------------------------------
