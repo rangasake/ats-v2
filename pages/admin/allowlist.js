@@ -4,6 +4,8 @@ import AppLayout from '../../components/layout/AppLayout';
 import { withAuth } from '../../lib/useAuth';
 import { ROLES } from '../../lib/constants';
 
+const BOOKING_PHONE_LOOKUP = process.env.NEXT_PUBLIC_BOOKING_PHONE_LOOKUP === 'true';
+
 function splitLine(line) {
   if (line.includes('\t')) return line.split('\t').map((c) => c.trim());
   const cells = [];
@@ -28,8 +30,8 @@ function mapHeader(h) {
   const x = String(h || '').toLowerCase().replace(/\s+/g, ' ').trim();
   if (/v_?num|vehicle|veh|reg|plate/.test(x)) return 'v_num';
   if (/(b_?num|booking\s*(num|no|number)|book\s*(num|no|number))/.test(x)) return 'b_num';
-  if (/(b_?nam|booking\s*name|book\s*name)/.test(x)) return 'b_nam';
-  if (/amt|amount|value/.test(x)) return 'amt';
+  if (!BOOKING_PHONE_LOOKUP && /(b_?nam|booking\s*name|book\s*name)/.test(x)) return 'b_nam';
+  if (!BOOKING_PHONE_LOOKUP && /amt|amount|value/.test(x)) return 'amt';
   return null;
 }
 
@@ -60,8 +62,8 @@ function parseCSVText(text) {
     } else {
       v = row[0];
       b = row[1];
-      bn = row[2];
-      amt = row[3];
+      bn = '';
+      amt = '';
     }
     v = (v || '').trim();
     if (!v) continue;
@@ -170,7 +172,7 @@ function AdminAllowList() {
       <Head><title>Allow List - AFTS</title></Head>
       <AppLayout title="✅ Allow List">
         <p className="text-sm text-gray-500 mb-4">
-          Add vehicles allowed to enter the station. Vehicle number, booking number, booking name and value only.
+          Add vehicles allowed to enter the station. Vehicle number and booking number{BOOKING_PHONE_LOOKUP ? ' only' : ', booking name and value only'}.
         </p>
 
         {success && (
@@ -184,7 +186,7 @@ function AdminAllowList() {
         <div className="card mb-4">
           <h2 className="section-title">➕ Add Single Vehicle</h2>
           <form onSubmit={handleSingleAdd}>
-            <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 mb-3">
+            <div className={`grid grid-cols-1 ${BOOKING_PHONE_LOOKUP ? 'sm:grid-cols-2' : 'sm:grid-cols-4'} gap-3 mb-3`}>
               <div>
                 <label className="form-label">Vehicle Number</label>
                 <input
@@ -206,28 +208,32 @@ function AdminAllowList() {
                   placeholder="Optional"
                 />
               </div>
-              <div>
-                <label className="form-label">Booking Name</label>
-                <input
-                  type="text"
-                  value={single.b_nam}
-                  onChange={(e) => setSingle({ ...single, b_nam: e.target.value })}
-                  className="form-input"
-                  placeholder="Optional"
-                />
-              </div>
-              <div>
-                <label className="form-label">Value</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={single.amt}
-                  onChange={(e) => setSingle({ ...single, amt: e.target.value })}
-                  className="form-input"
-                  placeholder="Optional"
-                />
-              </div>
+              {!BOOKING_PHONE_LOOKUP && (
+                <div>
+                  <label className="form-label">Booking Name</label>
+                  <input
+                    type="text"
+                    value={single.b_nam}
+                    onChange={(e) => setSingle({ ...single, b_nam: e.target.value })}
+                    className="form-input"
+                    placeholder="Optional"
+                  />
+                </div>
+              )}
+              {!BOOKING_PHONE_LOOKUP && (
+                <div>
+                  <label className="form-label">Value</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={single.amt}
+                    onChange={(e) => setSingle({ ...single, amt: e.target.value })}
+                    className="form-input"
+                    placeholder="Optional"
+                  />
+                </div>
+              )}
             </div>
             <button type="submit" className="btn-primary">Add to List</button>
           </form>
@@ -260,13 +266,13 @@ function AdminAllowList() {
             </button>
           </div>
           <p className="text-xs text-gray-500 mb-2">
-            Format: <code className="bg-gray-100 px-1 rounded">vehicle_number, booking_number, booking_name, value</code> — one row per line. A header row is optional.
+            Format: <code className="bg-gray-100 px-1 rounded">vehicle_number, booking_number{BOOKING_PHONE_LOOKUP ? '' : ', booking_name, value'}</code> — one row per line. A header row is optional.
           </p>
           <textarea
             value={csvText}
             onChange={(e) => handleCsvText(e.target.value)}
             rows={6}
-            placeholder={'AP37AB1234, BK1001, RAMESH, 500\nAP37AC5678, , SURESH, 1000'}
+            placeholder={BOOKING_PHONE_LOOKUP ? 'AP37AB1234, BK1001\nAP37AC5678, BK1002' : 'AP37AB1234, BK1001, RAMESH, 500\nAP37AC5678, , SURESH, 1000'}
             className="form-input resize-y font-mono text-sm"
           />
         </div>
@@ -287,8 +293,8 @@ function AdminAllowList() {
                     <th className="py-2 pr-2 font-semibold">#</th>
                     <th className="py-2 pr-2 font-semibold">Vehicle Number</th>
                     <th className="py-2 pr-2 font-semibold">Booking Number</th>
-                    <th className="py-2 pr-2 font-semibold">Booking Name</th>
-                    <th className="py-2 pr-2 font-semibold">Value</th>
+                    {!BOOKING_PHONE_LOOKUP && <th className="py-2 pr-2 font-semibold">Booking Name</th>}
+                    {!BOOKING_PHONE_LOOKUP && <th className="py-2 pr-2 font-semibold">Value</th>}
                     <th className="py-2 font-semibold"></th>
                   </tr>
                 </thead>
@@ -298,8 +304,8 @@ function AdminAllowList() {
                       <td className="py-2 pr-2 text-gray-400">{i + 1}</td>
                       <td className="py-2 pr-2 font-mono font-semibold text-gray-800">{p.v_num}</td>
                       <td className="py-2 pr-2 text-gray-600">{p.b_num || '—'}</td>
-                      <td className="py-2 pr-2 text-gray-600">{p.b_nam || '—'}</td>
-                      <td className="py-2 pr-2 text-gray-600">{p.amt || '—'}</td>
+                      {!BOOKING_PHONE_LOOKUP && <td className="py-2 pr-2 text-gray-600">{p.b_nam || '—'}</td>}
+                      {!BOOKING_PHONE_LOOKUP && <td className="py-2 pr-2 text-gray-600">{p.amt || '—'}</td>}
                       <td className="py-2">
                         <button type="button" onClick={() => removePending(i)} className="text-red-400 hover:text-red-600" title="Remove">✕</button>
                       </td>
@@ -328,8 +334,8 @@ function AdminAllowList() {
                   <tr className="text-left text-xs text-gray-500 border-b border-gray-100">
                     <th className="py-2 pr-2 font-semibold">Vehicle Number</th>
                     <th className="py-2 pr-2 font-semibold">Booking Number</th>
-                    <th className="py-2 pr-2 font-semibold">Booking Name</th>
-                    <th className="py-2 pr-2 font-semibold">Value</th>
+                    {!BOOKING_PHONE_LOOKUP && <th className="py-2 pr-2 font-semibold">Booking Name</th>}
+                    {!BOOKING_PHONE_LOOKUP && <th className="py-2 pr-2 font-semibold">Value</th>}
                     <th className="py-2 pr-2 font-semibold">Added</th>
                     <th className="py-2 font-semibold"></th>
                   </tr>
@@ -339,8 +345,8 @@ function AdminAllowList() {
                     <tr key={i} className="border-b border-gray-50 last:border-0">
                       <td className="py-2 pr-2 font-mono font-semibold text-gray-800">{row.v_num}</td>
                       <td className="py-2 pr-2 text-gray-600">{row.b_num || '—'}</td>
-                      <td className="py-2 pr-2 text-gray-600">{row.b_nam || '—'}</td>
-                      <td className="py-2 pr-2 text-gray-600">{row.amt || '—'}</td>
+                      {!BOOKING_PHONE_LOOKUP && <td className="py-2 pr-2 text-gray-600">{row.b_nam || '—'}</td>}
+                      {!BOOKING_PHONE_LOOKUP && <td className="py-2 pr-2 text-gray-600">{row.amt || '—'}</td>}
                       <td className="py-2 pr-2 text-gray-400">
                         {row.ts ? new Date(row.ts).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' }) : '—'}
                       </td>
