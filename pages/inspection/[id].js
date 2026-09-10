@@ -147,7 +147,7 @@ function InspectionDetail() {
             <InfoRow label="Lane" value={`${vehicle.vehicle_lane} / ${vehicle.lane_type}`} />
             <InfoRow label="Reg. Date" value={vehicle.registration_date} />
             <InfoRow label="Booking Phone" value={vehicle.b_num} />
-            <InfoRow label="Booking Name" value={vehicle.b_nam} />
+            {/* <InfoRow label="Booking Name" value={vehicle.b_nam} /> */}
             <InfoRow label="Result" value={vehicle.ins_result} />
             <InfoRow label="FC Validity" value={vehicle.fc_expiry ? `${vehicle.fc_expiry} Years` : ''} />
           </Section>
@@ -191,8 +191,8 @@ function InspectionDetail() {
         {(inspection.booking_id || inspection.supervisor_remarks) && inspection.status !== INSPECTION_STATUS.DRAFT && (
           <Section title="✅ Supervisor Review">
             <InfoRow label="Status" value={inspection.status} />
-            <InfoRow label="Booking Phone" value={inspection.agent_phone} />
-            {/* <InfoRow label="Booking Name" value={inspection.agent_name} /> */}
+            <InfoRow label="Booking Phone" value={inspection.b_phone} />
+            {/* <InfoRow label="Booking Name" value={inspection.b_name} /> */}
             <InfoRow label="Booking ID" value={inspection.booking_id} />
             <InfoRow label="Remarks" value={inspection.supervisor_remarks} />
           </Section>

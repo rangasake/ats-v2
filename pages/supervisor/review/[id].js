@@ -22,6 +22,8 @@ function normalizeDateForInput(value) {
   return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
 }
 
+const BOOKING_PHONE_LOOKUP = process.env.NEXT_PUBLIC_BOOKING_PHONE_LOOKUP === 'true';
+
 function SupervisorReview() {
   const router = useRouter();
   const { id } = router.query;
@@ -162,7 +164,7 @@ function SupervisorReview() {
       vehicle_lane:      ownerForm.vehicle_lane,
       lane_type:         ownerForm.lane_type,
       b_num:             agentPhone.trim(),
-      b_nam:             agentName || inspection?.agent_name || '',
+      b_nam:             agentName || inspection?.b_name || '',
       ins_result:        inspectionResult || '',
       fc_expiry:         inspection?.fc_expiry || '',
     };
@@ -489,7 +491,7 @@ function SupervisorReview() {
                 type="tel"
                 value={agentPhone}
                 onChange={(e) => { setAgentPhone(e.target.value); setAgentName(''); }}
-                onBlur={lookupAgent}
+                onBlur={BOOKING_PHONE_LOOKUP ? undefined : lookupAgent}
                 className="form-input"
                 placeholder="Enter 10-digit phone"
                 maxLength={10}
@@ -498,7 +500,7 @@ function SupervisorReview() {
             </div>
           </div>
 
-          {agentPhone.length >= 10 && (
+          {!BOOKING_PHONE_LOOKUP && agentPhone.length >= 10 && (
             <div className="mb-4">
               <label className="form-label">Booking Name</label>
               {agentLookingUp ? (

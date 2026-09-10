@@ -223,8 +223,8 @@ async function handler(req, res) {
     // --------------------------------------------------
 
     await ensureHeaders(org.sheetId, SHEETS.INSPECTIONS, [
-      "agent_phone",
-      "agent_name",
+      "b_phone",
+      "b_name",
       "cert_id",
       "inspection_result",
       "fail_reason",
@@ -261,15 +261,15 @@ async function handler(req, res) {
 
         supervisor_username: req.user.username,
 
-        agent_phone: agent_phone || "",
+        b_phone: agent_phone || "",
 
-        agent_name: agent_name || "",
+        b_name: agent_name || "",
 
         booking_id: finalBookingId,
 
-        b_num: agent_phone || inspection.agent_phone || "",
+        b_num: agent_phone || inspection.b_phone || "",
 
-        b_nam: agent_name || inspection.b_nam || inspection.agent_name || "",
+        b_nam: agent_name || inspection.b_nam || inspection.b_name || "",
 
         ins_result: inspection_result || inspection.ins_result || "",
 
@@ -317,8 +317,8 @@ async function handler(req, res) {
         await ensureHeaders(org.sheetId, SHEETS.VEHICLES, VEHICLE_HEADERS);
 
         const vehicleRow = {
-          b_num:      agent_phone || inspection.agent_phone || "",
-          b_nam:      agent_name || inspection.b_nam || inspection.agent_name || "",
+          b_num:      agent_phone || inspection.b_phone || "",
+          b_nam:      agent_name || inspection.b_nam || inspection.b_name || "",
           ins_result: inspection_result || inspection.ins_result || "",
           fc_expiry:  inspection.fc_expiry || "",
         };
