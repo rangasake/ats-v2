@@ -15,6 +15,13 @@ export default async function handler(req, res) {
   try {
     // const user = await findRow(SHEETS.USERS, 'username', username.trim());
     const org = getOrgByHost(req.headers.host);
+    if (!org) {
+      return res.status(500).json({ error: 'Organization not configured for this domain' });
+    }
+    if (!org.sheetId) {
+      console.error(`[LOGIN] Missing sheetId for org "${org.id}". Check KONASEEMA_SHEET_ID / KRISHNA_SHEET_ID / DEV_SHEET_ID env vars.`);
+      return res.status(500).json({ error: 'Organization sheet is not configured' });
+    }
       const user = await findRow(org.sheetId, SHEETS.USERS, 'username', username.trim());
 
     if (!user || user.active?.toLowerCase() !== 'true') {
