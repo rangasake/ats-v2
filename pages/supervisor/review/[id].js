@@ -66,7 +66,12 @@ function SupervisorReview() {
     if (id) fetchData();
     fetch('/api/config/mandals')
       .then((r) => r.json())
-      .then((d) => setMandals(d || {}))
+      .then((d) =>
+        setMandals({
+          mandals: Array.isArray(d?.mandals) ? d.mandals : [],
+          mandalRtoMap: d?.mandalRtoMap || {},
+        })
+      )
       .catch(() => {});
   }, [id]);
 
@@ -271,7 +276,7 @@ function SupervisorReview() {
     setOwnerForm((prev) => {
       const next = { ...prev, [field]: value };
       if (field === 'mandal_name') {
-        next.rto_office = mandals?.mandalRtoMap[value] || '';
+        next.rto_office = mandals?.mandalRtoMap?.[value] || '';
       }
       return next;
     });
